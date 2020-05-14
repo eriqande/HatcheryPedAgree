@@ -79,6 +79,11 @@ git checkout master
 git pull
 ```
 
+To make it easier to work with branches, we installed
+`.git-prompt.sh` and updates `PS1` to show the branch on our
+bash prompt.
+
+
 
 
 Be sure to get `upstream` set up.  Then run through the pull request procedure.
