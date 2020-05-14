@@ -5,6 +5,7 @@
 #'   `Indiv`, `Locus`, `gene_copy`, `snp_as_int`.  Missing data should be represented as
 #'   a 0.
 #' @param S a data frame of meta data with the columns Indiv,   SEX, and    collection_date
+#' @export
 prep_for_snppit <- function(G, S,
                             use_spawn_date = TRUE,
                             use_sex = TRUE,
