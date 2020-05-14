@@ -1,16 +1,21 @@
+#' Prepare SNPPIT runs to compare them
+#'
+#' More later
+#'
+#' @export
 prep_to_compare_snppit_runs <- function(
-  D, 
+  D,
   type_levels = c("nSD_full", "nSD_dump10", "wSD_full", "wSD_dump10"),
   #type_levels = c("nSD_full", "nSD_dump10", "nSD_dumpE", "nSD_Hil", "wSD_full", "wSD_dump10", "wSD_dumpE", "wSD_Hil")
   GTseqed = sex_and_date$Indiv,
   GT_hi_miss = gt_miss10p
 ) {
-  
+
   # get the number of the types of analyses
   num_types <- length(type_levels)
-  
+
   D$type_f = factor(D$type_of_analysis, levels = type_levels)
-  
+
   # now, we need to fill in values for the FDR (and p-value) for sorting these
   # things along the x-axis.  Namely we need the values for the "base" case (type_f = 1),
   # if those were NA. I will fill those with the average of the remaining values.
@@ -22,22 +27,22 @@ prep_to_compare_snppit_runs <- function(
     mutate(
       FDR_comp = ifelse(is.na(FDR), mean(FDR, na.rm = TRUE), FDR),
       Pvalue_comp = ifelse(is.na(Pvalue), mean(Pvalue, na.rm = TRUE), Pvalue)
-    ) %>% 
+    ) %>%
     group_by(Kid) %>%
     mutate(FDR_comp1 = FDR_comp[1],
-           Pvalue_comp1 = Pvalue_comp[1]) %>% 
+           Pvalue_comp1 = Pvalue_comp[1]) %>%
     arrange(FDR_comp1, Pvalue_comp1, Kid) %>%
     ungroup() %>%
     mutate(idx_years_aggregated = as.integer(factor(Kid, levels = unique(Kid))))
-  
-  
-  
+
+
+
   # Now, give each one an index based on the year that they are in
   D3 <- D2 %>%
     group_by(kid_spawn_year) %>%
     mutate(idx_by_year = as.integer(factor(Kid, levels = unique(Kid)))) %>%
     ungroup()
-  
+
   # now, we want to pick out those indivs that are not assigned to the same
   # parents as the base case (type_f == 1) when both of them are non-missing
   base_casers <- D3 %>%
@@ -46,10 +51,10 @@ prep_to_compare_snppit_runs <- function(
            baseMa = Ma) %>%
     filter(as.integer(type_f) == 1) %>%
     select(-type_f)
-  
+
   D3_plus <- D3 %>%
     left_join(base_casers, by = "Kid")
-  
+
   # finally, we want to get some things to make colors
   D4 <- D3_plus %>%
     mutate(
@@ -70,6 +75,6 @@ prep_to_compare_snppit_runs <- function(
         TRUE                      ~ "NOT C_Se_Se"
       )
     )
-  
+
   D4
 }
