@@ -17,24 +17,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Thursday, May 14, 2020
 
-### Installing packages
+### 1. Installing packages
 
 Make sure this is done:
 ```r
 install.packages(c("devtools", "roxygen2", "testthat", "knitr", "styler"))
 ```
 
-### Forking and Pull requests
-
-Let's follow through the packages book.
-
-### Code style
+### 2. Code style
 
 This is **mandatory** reading: 
 [https://style.tidyverse.org/](https://style.tidyverse.org/), at least, for
 now, Chapters 1--7.
 
-### Roxygen
+### 3. Roxygen
 
 Make sure that the configurations are done on their projects. See and
 follow directions at:  
@@ -46,7 +42,19 @@ Roxygen: list(markdown = TRUE)
 ```
 in the `DESCRIPTION` file.
 
-### Data sets 
+
+### 4. Forking and Pull requests
+
+Let's follow through the packages book.
+
+```sh
+git config --global merge.conflictstyle diff3
+```
+
+Be sure to get `upstream` set up.  Then run through the pull request procedure.
+
+
+### 5. Data sets 
 
 What format are these currently in?  I want to to have both of
 the steelhead data sets in a canonical form to be in this project,
@@ -57,5 +65,7 @@ I will send a specification of what I want, once I have figured
 that out, and then Anne and Laura can email those to me and I can put them
 together in a directory that we can send out to everyone.  That way we
 can all test new functions on these private data sets.
+
+**DON'T COMMIT THESE DATA SETS TO THE REPO!**
 
 
