@@ -2,8 +2,8 @@
 #'
 #' More later...
 #' @param G a long format data frame of SNPs.  It must have, at a minimum, the columns
-#' Indiv,   Locus,    gene_copy,  snp_as_int.  Missing data should be represented as
-#' a 0.
+#'   `Indiv`, `Locus`, `gene_copy`, `snp_as_int`.  Missing data should be represented as
+#'   a 0.
 #' @param S a data frame of meta data with the columns Indiv,   SEX, and    collection_date
 prep_for_snppit <- function(G, S,
                             use_spawn_date = TRUE,
@@ -30,10 +30,11 @@ prep_for_snppit <- function(G, S,
 
   # prep the sex and spawn date data
   meta <- sex_and_date %>%
-    mutate(spawn_date = mdy(collection_date),
-           sex = recode(SEX, Female = "F", Male = "M"),
-           sex = ifelse(is.na(sex), "?", sex),
-           year = year(spawn_date)
+    mutate(
+      spawn_date = mdy(collection_date),
+      sex = recode(SEX, Female = "F", Male = "M"),
+      sex = ifelse(is.na(sex), "?", sex),
+      year = year(spawn_date)
     ) %>%
     arrange(spawn_date) %>%
     select(Indiv, sex, year, spawn_date)
@@ -73,24 +74,28 @@ POPCOLUMN_REPRO_YEARS
 {SPAWN_GROUP_COL}
 OFFSPRINGCOLUMN_SAMPLE_YEAR
 OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
-")
+"
+  )
 
   cat(preamble, file = outf)
   write.table(cbind(SNP_names, geno_err),
-              row.names = FALSE,
-              col.names = FALSE,
-              quote = FALSE,
-              file = outf, append = TRUE)
+    row.names = FALSE,
+    col.names = FALSE,
+    quote = FALSE,
+    file = outf, append = TRUE
+  )
   cat("POP Parents\n", file = outf, append = TRUE)
   write.table(Pars,
-              row.names = FALSE,
-              col.names = FALSE,
-              quote = FALSE,
-              file = outf, append = TRUE, sep = "\t")
+    row.names = FALSE,
+    col.names = FALSE,
+    quote = FALSE,
+    file = outf, append = TRUE, sep = "\t"
+  )
   cat("OFFSPRING Offspring Parents\n", file = outf, append = TRUE)
   write.table(Offs,
-              row.names = FALSE,
-              col.names = FALSE,
-              quote = FALSE,
-              file = outf, append = TRUE, sep = "\t")
+    row.names = FALSE,
+    col.names = FALSE,
+    quote = FALSE,
+    file = outf, append = TRUE, sep = "\t"
+  )
 }

@@ -1,0 +1,61 @@
+---
+title: 'Itinerary for package development'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+# Topics for discussion during meetings
+
+## Thursday, May 14, 2020
+
+### Installing packages
+
+Make sure this is done:
+```r
+install.packages(c("devtools", "roxygen2", "testthat", "knitr", "styler"))
+```
+
+### Forking and Pull requests
+
+Let's follow through the packages book.
+
+### Code style
+
+This is **mandatory** reading: 
+[https://style.tidyverse.org/](https://style.tidyverse.org/), at least, for
+now, Chapters 1--7.
+
+### Roxygen
+
+Make sure that the configurations are done on their projects. See and
+follow directions at:  
+[https://r-pkgs.org/man.html#man-workflow-2](https://r-pkgs.org/man.html#man-workflow-2)
+
+Note that we have:
+```
+Roxygen: list(markdown = TRUE)
+```
+in the `DESCRIPTION` file.
+
+### Data sets 
+
+What format are these currently in?  I want to to have both of
+the steelhead data sets in a canonical form to be in this project,
+but have them gitignored. Then I will put the coho SNPs up on GitHub
+for running through examples, etc.
+
+I will send a specification of what I want, once I have figured
+that out, and then Anne and Laura can email those to me and I can put them
+together in a directory that we can send out to everyone.  That way we
+can all test new functions on these private data sets.
+
+

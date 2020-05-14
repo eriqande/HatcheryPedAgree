@@ -17,7 +17,7 @@ prep_for_snppit(
 }
 \arguments{
 \item{G}{a long format data frame of SNPs.  It must have, at a minimum, the columns
-Indiv,   Locus,    gene_copy,  snp_as_int.  Missing data should be represented as
+\code{Indiv}, \code{Locus}, \code{gene_copy}, \code{snp_as_int}.  Missing data should be represented as
 a 0.}
 
 \item{S}{a data frame of meta data with the columns Indiv,   SEX, and    collection_date}
