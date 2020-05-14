@@ -51,6 +51,36 @@ Let's follow through the packages book.
 git config --global merge.conflictstyle diff3
 ```
 
+Also set up upstream:
+```sh
+git remote add upstream https://github.com/eriqande/HatcheryPedAgree.git
+```
+
+Then, any time you want to get new commits from the upstream repo, you do:
+```sh
+git fetch upstream
+```
+That "fetches" the objects.
+
+And, to merge them into your current branch, once they are fetched, you do:
+```sh
+git merge upstream/master
+```
+
+To be able to pull upstream into the current branch, you can set that up
+with:
+```sh
+git branch -u upstream/master   
+```
+
+Then, to pull it into master you can:
+```sh
+git checkout master
+git pull
+```
+
+
+
 Be sure to get `upstream` set up.  Then run through the pull request procedure.
 
 
