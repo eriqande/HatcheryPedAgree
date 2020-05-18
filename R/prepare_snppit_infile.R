@@ -8,7 +8,7 @@
 #' @export
 #' @examples
 #' prep_for_snppit(G = coho_genotypes, S = coho_metadata)
-prep_for_snppit <- function(G,
+prepare_snppit_infile <- function(G,
                             S,
                             use_spawner_group = TRUE,
                             use_sex = TRUE,
