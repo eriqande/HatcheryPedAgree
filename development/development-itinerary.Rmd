@@ -15,6 +15,80 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Topics for discussion during meetings
 
+## For: Tuesday, May 19, 2020
+
+### 1. Data set format
+
+Laura and Anne, here is the format we want the main, initial datasets to be in:
+
+* A tibble of genotypes that must have _at least_ these columns:
+    1. `indiv`: the individual ID (could be, for example, the NMFS_DNA_ID
+    2. `locus`: the name of the locus
+    3. `gene_copy`: a column of 1's and 2's
+    4. `allele_int`: a column of alleles, 1-4, with 0 for missing data.
+    
+    These columns can be in any order, but ordered as above is natural.
+Note that the genotypes can contain more columns.  For example, it could have a full
+microhaplotype allele column, etc.  But for the SNP data sets, we don't really
+need another one.
+
+* A tibble of metadata relevant to the parentage. At this point I am thinking
+that this includes:
+    1. `indiv`
+    2. `sex` a column of Male, Female, or NA
+    3. `spawner_group`: typically the data of collection/spawning
+    4. `year`: the year the individual was sampled/spawned
+    
+    Anne and Laura, can you think of anything else that belongs in here?
+    
+An example of these two data files can be found now by loading the package
+which gives access to `coho_genotypes` and `coho_metadata`.  (You will have to pull
+from upstream to master and load that version).
+
+### 2. Let's talk about the `data` folder and `data.R`
+
+* Just make sure we understand how package data can work.
+* Talk about `extdata` too.
+
+### 3. Matching samples
+
+We need to do a few things here:
+
+1. Function to convert to rubias format
+2. Run rubias to find matching samples.
+3. Find connected components.
+4. Figure out which of the version of the individuals will be kept as the
+canonical genotype.  
+
+Along the way, we will want to investigate the results.  So, we will break this
+down into different functions.
+
+Here are some things to read about that we will use:
+
+* [pivoting](https://tidyr.tidyverse.org/articles/pivot.html).  This is gather/spread, but on steroids.  New
+from the 'tidyr' package.
+* [tidygraph](https://www.data-imaginist.com/2017/introducing-tidygraph/) Thomas Lin Pedersen's tidyverse 
+solution to handling graphs and networks. TLP was an intern with Hadley at RStudio when he did gganinmate.
+Now, he is still with RStudio, I think, and does amazing work.
+
+I need you guys to get your steelhead data sets into that format so we can
+have those to test on.
+
+
+### 4. A little bit about NSE and rlang::enquo()
+
+Weird stuff, but it will let us convert to rubias with microhaps, when we have those.
+
+### 5. R CMD Check
+
+Two main points here:
+
+* Namespace addressing and Imports in Description.
+* Visible bindings for 'global' variables.
+
+
+
+
 ## Thursday, May 14, 2020
 
 ### 1. Installing packages

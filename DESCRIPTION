@@ -18,6 +18,7 @@ Imports:
     lubridate,
     magrittr,
     readr,
+    rlang,
     stringr,
     tibble,
     tidyr
