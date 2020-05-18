@@ -7,21 +7,24 @@
 prep_for_snppit(
   G,
   S,
-  use_spawn_date = TRUE,
+  use_spawner_group = TRUE,
   use_sex = TRUE,
-  minAge = 2,
-  maxAge = 4,
+  min_age = 2,
+  max_age = 4,
   geno_err = 0.005,
-  outf = "snippit_out.txt"
+  outf = tempfile()
 )
 }
 \arguments{
 \item{G}{a long format data frame of SNPs.  It must have, at a minimum, the columns
-\code{Indiv}, \code{Locus}, \code{gene_copy}, \code{snp_as_int}.  Missing data should be represented as
-a 0.}
+\code{indiv}, \code{locus}, \code{gene_copy}, \code{allele_int}.  Missing data should be represented as
+NA.}
 
-\item{S}{a data frame of meta data with the columns Indiv,   SEX, and    collection_date}
+\item{S}{a data frame of meta data with the columns indiv,   sex, and    spawner_group}
 }
 \description{
 More later...
+}
+\examples{
+prep_for_snppit(G = coho_genotypes, S = coho_metadata)
 }

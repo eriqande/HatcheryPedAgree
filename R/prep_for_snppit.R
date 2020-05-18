@@ -2,43 +2,45 @@
 #'
 #' More later...
 #' @param G a long format data frame of SNPs.  It must have, at a minimum, the columns
-#'   `Indiv`, `Locus`, `gene_copy`, `snp_as_int`.  Missing data should be represented as
-#'   a 0.
-#' @param S a data frame of meta data with the columns Indiv,   SEX, and    collection_date
+#'   `indiv`, `locus`, `gene_copy`, `allele_int`.  Missing data should be represented as
+#'   NA.
+#' @param S a data frame of meta data with the columns indiv,   sex, and    spawner_group
 #' @export
-prep_for_snppit <- function(G, S,
-                            use_spawn_date = TRUE,
+#' @examples
+#' prep_for_snppit(G = coho_genotypes, S = coho_metadata)
+prep_for_snppit <- function(G,
+                            S,
+                            use_spawner_group = TRUE,
                             use_sex = TRUE,
-                            minAge = 2,
-                            maxAge = 4,
+                            min_age = 2,
+                            max_age = 4,
                             geno_err = 0.005,
-                            outf = "snippit_out.txt") {
+                            outf = tempfile()) {
 
   # these will get changed if we don't use them
-  SEX_COL <- "POPCOLUMN_SEX"
-  SPAWN_GROUP_COL <- "POPCOLUMN_SPAWN_GROUP"
+  sex_col <- "POPCOLUMN_SEX"
+  spawn_group_col <- "POPCOLUMN_SPAWN_GROUP"
 
 
   # first, make a genotype matrix. Put spaces between the gene copies in a locus
   M <- G %>%
-    select(Indiv, Locus, gene_copy, snp_as_int) %>%
-    spread(key = gene_copy, value = snp_as_int) %>%
+    select(indiv, locus, gene_copy, allele_int) %>%
+    mutate(allele_int = ifelse(is.na(allele_int), 0, allele_int)) %>%
+    spread(key = gene_copy, value = allele_int) %>%
     unite(col = "geno", `1`, `2`, sep = " ") %>%
-    spread(key = Locus, value = geno)
+    spread(key = locus, value = geno)
 
   # get the marker names
   SNP_names <- colnames(M)[-1]
 
   # prep the sex and spawn date data
-  meta <- sex_and_date %>%
+  meta <- S %>%
     mutate(
-      spawn_date = mdy(collection_date),
-      sex = recode(SEX, Female = "F", Male = "M"),
+      sex = recode(sex, Female = "F", Male = "M"),
       sex = ifelse(is.na(sex), "?", sex),
-      year = year(spawn_date)
     ) %>%
-    arrange(spawn_date) %>%
-    select(Indiv, sex, year, spawn_date)
+    arrange(year, spawner_group) %>%
+    select(indiv, sex, year, spawner_group)
 
   # break the genos into candidate parents and offspring.
   # Basically if your spawn year is less than the min year + the
@@ -46,22 +48,22 @@ prep_for_snppit <- function(G, S,
   # your spawn year is greater than max year - min age, you don't get
   # to be a candidate parent
   Offs <- meta %>%
-    filter(year >= min(year) + minAge) %>%
-    select(-sex, -spawn_date) %>%
-    mutate(age_range = str_c(minAge, "-", maxAge)) %>%
-    left_join(., M, by = "Indiv")
+    filter(year >= min(year) + min_age) %>%
+    select(-sex, -spawner_group) %>%
+    mutate(age_range = str_c(min_age, "-", max_age)) %>%
+    left_join(., M, by = "indiv")
 
   Pars <- meta %>%
-    filter(year <= max(year) - minAge) %>%
-    left_join(., M, by = "Indiv")
+    filter(year <= max(year) - min_age) %>%
+    left_join(., M, by = "indiv")
 
 
   if (use_sex == FALSE) {
-    SEX_COL <- ""
+    sex_col <- ""
     Pars <- Pars %>% select(-sex)
   }
-  if (use_spawn_date == FALSE) {
-    SPAWN_GROUP_COL <- ""
+  if (use_spawner_group == FALSE) {
+    spawn_group_col <- ""
     Pars <- Pars %>% select(-spawn_date)
   }
 
@@ -70,9 +72,9 @@ prep_for_snppit <- function(G, S,
   preamble <- glue::glue(
     "NUMLOCI {length(SNP_names)}
 MISSING_ALLELE 0
-{SEX_COL}
+{sex_col}
 POPCOLUMN_REPRO_YEARS
-{SPAWN_GROUP_COL}
+{spawn_group_col}
 OFFSPRINGCOLUMN_SAMPLE_YEAR
 OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
 "
@@ -99,4 +101,7 @@ OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
     quote = FALSE,
     file = outf, append = TRUE, sep = "\t"
   )
+
+  # message to user
+  message("snppit input file written to ", outf)
 }
