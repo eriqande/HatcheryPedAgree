@@ -4,12 +4,12 @@
 \alias{genos2rubias}
 \title{convert long format genotypes to rubias format}
 \usage{
-genos2rubias(genos, allele_column = allele_int, missing = "0")
+genos2rubias(genos, allele_column = allele_int)
 }
 \arguments{
 \item{genos}{the long format genotypes tibble with columns
-\code{indiv}, \code{locus}, \code{gene_copy} and \code{allele_int} (or another column
-holding the alleles).}
+\code{indiv}, \code{locus}, \code{gene_copy} and \code{allele_int}.  Missing data
+in the allele_int column must be denoted by NA.}
 
 \item{allele_column}{unquoted name of the column holding the alleles to
 use.  By default this is \code{allele_int}.}
