@@ -25,7 +25,7 @@ Laura and Anne, here is the format we want the main, initial datasets to be in:
     1. `indiv`: the individual ID (could be, for example, the NMFS_DNA_ID
     2. `locus`: the name of the locus
     3. `gene_copy`: a column of 1's and 2's
-    4. `allele_int`: a column of alleles, 1-4, with 0 for missing data.
+    4. `allele_int`: a column of alleles, 1-4, with NA for missing data.
     
     These columns can be in any order, but ordered as above is natural.
 Note that the genotypes can contain more columns.  For example, it could have a full
