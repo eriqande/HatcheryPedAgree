@@ -15,7 +15,67 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Topics for discussion during meetings
 
-## For: Tuesday, May 19, 2020
+## For: Thursday, May 21, 2020
+
+### 1. Eric munges the RR and CV steelhead data sets
+
+Both Anne and Laura have sent me their genotypes and metadata file.
+They did a lot of the backend hard work, but I have a few things to do
+here to clean them up.
+
+#### CVSH
+
+**Genotypes**: These all looked great.  I checked them, ungrouped the tibble
+and then reordered the column names. I also arranged things so that all the
+genotypes for an individual are together in one place.  This is not a necessity,
+but it makes it easier to look at.
+
+**Metadata**.  This looks good, but I caught a few issues:
+```{r, eval=FALSE}
+# read in the original
+cm <- read_rds("../private/as_sent/cvsh_meta.rds")
+
+# It turns out that the hatchery names are not consistent. So we
+# need to fix those. Also, I don't want spaces in those names.
+
+# Note, we need to put spaces in hatchery names into a check() function.
+cm2 <- cm %>%
+  mutate(
+    hatchery = recode(
+      hatchery,
+      `Coleman National Fish Hatchery` = "Coleman Hatchery",
+      `Mokelumne Hatchery` = "Mokelumne River Hatchery",
+      `Nimbus River Hatchery` = "Nimbus Hatchery"
+    ),
+    hatchery = str_replace_all(hatchery, " +", "_")
+  )
+
+# then i resaved that
+write_rds(cm2, path = "../private/cvsh_metadata.rds", compress = "xz")
+```
+
+
+#### Russian River
+
+```{r, eval=FALSE}
+# having a look
+rg <- read_rds("../private/as_sent/RR_steelhead_geno.rds")
+
+# minor tweaks
+rg %>% 
+  select(indiv, locus, gene_copy, allele_int) %>%
+  arrange(indiv, locus, gene_copy) %>%
+  write_rds("../private/rrsh_genotypes.rds", compress = "xz")
+
+# how about metadata?
+# It needs ungrouping...
+# hatchery names and sex look good
+read_rds("../private/as_sent/RR_steelhead_meta.rds") %>%
+  ungroup() %>%
+  write_rds(path = "../private/rrsh_metadata.rds", compress = "xz")
+```
+
+## For: Wednesday, May 20, 2020
 
 ### 1. Data set format
 
