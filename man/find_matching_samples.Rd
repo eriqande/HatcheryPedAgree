@@ -4,13 +4,10 @@
 \alias{find_matching_samples}
 \title{Find matching samples to a single representative}
 \usage{
-find_matching_samples(genotypes, metadata, ...)
+find_matching_samples(genotypes, return_aliases = FALSE, ...)
 }
 \arguments{
 \item{genotypes}{A tibble like coho_genotypes that has}
-
-\item{metadata}{A tibble that has the meta data for all
-the individuals.}
 
 \item{...}{parameters to be passed to rubias::close_matching_samples.
 Intended to be used for \code{min_frac_non_miss} and \code{min_frac_matching}}

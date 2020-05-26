@@ -20,7 +20,8 @@ prepare_snppit_infile(
 \code{indiv}, \code{locus}, \code{gene_copy}, \code{allele_int}.  Missing data should be represented as
 NA.}
 
-\item{S}{a data frame of meta data with the columns indiv,   sex, and    spawner_group}
+\item{S}{a data frame of meta data with the columns \code{indiv}, \code{sex}, \code{spawner_group},
+and \code{hatchery}}
 }
 \description{
 More later...

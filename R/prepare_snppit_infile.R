@@ -4,18 +4,19 @@
 #' @param G a long format data frame of SNPs.  It must have, at a minimum, the columns
 #'   `indiv`, `locus`, `gene_copy`, `allele_int`.  Missing data should be represented as
 #'   NA.
-#' @param S a data frame of meta data with the columns indiv,   sex, and    spawner_group
+#' @param S a data frame of meta data with the columns `indiv`, `sex`, `spawner_group`,
+#' and `hatchery`
 #' @export
 #' @examples
 #' prep_for_snppit(G = coho_genotypes, S = coho_metadata)
 prepare_snppit_infile <- function(G,
-                            S,
-                            use_spawner_group = TRUE,
-                            use_sex = TRUE,
-                            min_age = 2,
-                            max_age = 4,
-                            geno_err = 0.005,
-                            outf = tempfile()) {
+                                  S,
+                                  use_spawner_group = TRUE,
+                                  use_sex = TRUE,
+                                  min_age = 2,
+                                  max_age = 4,
+                                  geno_err = 0.005,
+                                  outf = tempfile()) {
 
   # these will get changed if we don't use them
   sex_col <- "POPCOLUMN_SEX"
@@ -40,7 +41,7 @@ prepare_snppit_infile <- function(G,
       sex = ifelse(is.na(sex), "?", sex),
     ) %>%
     arrange(year, spawner_group) %>%
-    select(indiv, sex, year, spawner_group)
+    select(hatchery, indiv, sex, year, spawner_group)
 
   # break the genos into candidate parents and offspring.
   # Basically if your spawn year is less than the min year + the
@@ -69,16 +70,15 @@ prepare_snppit_infile <- function(G,
 
 
   # now assemble the text ouput
-  preamble <- glue::glue(
-    "NUMLOCI {length(SNP_names)}
-MISSING_ALLELE 0
-{sex_col}
-POPCOLUMN_REPRO_YEARS
-{spawn_group_col}
-OFFSPRINGCOLUMN_SAMPLE_YEAR
-OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
-"
-  )
+  preamble <- glue::glue("
+    NUMLOCI {length(SNP_names)}
+    MISSING_ALLELE 0
+    {sex_col}
+    POPCOLUMN_REPRO_YEARS
+    {spawn_group_col}
+    OFFSPRINGCOLUMN_SAMPLE_YEAR
+    OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
+    ")
 
   cat(preamble, file = outf)
   write.table(cbind(SNP_names, geno_err),
@@ -87,20 +87,33 @@ OFFSPRINGCOLUMN_AGE_AT_SAMPLING\n
     quote = FALSE,
     file = outf, append = TRUE
   )
-  cat("POP Parents\n", file = outf, append = TRUE)
-  write.table(Pars,
-    row.names = FALSE,
-    col.names = FALSE,
-    quote = FALSE,
-    file = outf, append = TRUE, sep = "\t"
-  )
-  cat("OFFSPRING Offspring Parents\n", file = outf, append = TRUE)
-  write.table(Offs,
-    row.names = FALSE,
-    col.names = FALSE,
-    quote = FALSE,
-    file = outf, append = TRUE, sep = "\t"
-  )
+
+  # cycle over the different hatcheries that might be involved
+  # and put in a block of parents for each
+  dump <- lapply(split(Pars, Pars$hatchery), function(x) {
+    cat("POP ", x$hatchery[1], "\n", file = outf, append = TRUE)
+    write.table(x %>% select(-hatchery),
+      row.names = FALSE,
+      col.names = FALSE,
+      quote = FALSE,
+      file = outf, append = TRUE, sep = "\t"
+    )
+  })
+
+
+
+  # then do the same thing for offspring from the different hatcheries.  And,
+  # for now, assume that the offspring could have come from any of the hatcheries
+  # (hence the ? after the Offspring name)
+  dump <- lapply(split(Offs, Offs$hatchery), function(x) {
+    cat("OFFSPRING Offspring-", x$hatchery[1], " ?\n", file = outf, append = TRUE, sep = "")
+    write.table(x %>% select(-hatchery),
+      row.names = FALSE,
+      col.names = FALSE,
+      quote = FALSE,
+      file = outf, append = TRUE, sep = "\t"
+    )
+  })
 
   # message to user
   message("snppit input file written to ", outf)

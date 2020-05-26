@@ -15,138 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Topics for discussion during meetings
 
-## For: Thursday, May 21, 2020
-
-### 1. Eric munges the RR and CV steelhead data sets
-
-Both Anne and Laura have sent me their genotypes and metadata file.
-They did a lot of the backend hard work, but I have a few things to do
-here to clean them up.
-
-#### CVSH
-
-**Genotypes**: These all looked great.  I checked them, ungrouped the tibble
-and then reordered the column names. I also arranged things so that all the
-genotypes for an individual are together in one place.  This is not a necessity,
-but it makes it easier to look at.
-
-**Metadata**.  This looks good, but I caught a few issues:
-```{r, eval=FALSE}
-# read in the original
-cm <- read_rds("../private/as_sent/cvsh_meta.rds")
-
-# It turns out that the hatchery names are not consistent. So we
-# need to fix those. Also, I don't want spaces in those names.
-
-# Note, we need to put spaces in hatchery names into a check() function.
-cm2 <- cm %>%
-  mutate(
-    hatchery = recode(
-      hatchery,
-      `Coleman National Fish Hatchery` = "Coleman Hatchery",
-      `Mokelumne Hatchery` = "Mokelumne River Hatchery",
-      `Nimbus River Hatchery` = "Nimbus Hatchery"
-    ),
-    hatchery = str_replace_all(hatchery, " +", "_")
-  )
-
-# then i resaved that
-write_rds(cm2, path = "../private/cvsh_metadata.rds", compress = "xz")
-```
-
-
-#### Russian River
-
-```{r, eval=FALSE}
-# having a look
-rg <- read_rds("../private/as_sent/RR_steelhead_geno.rds")
-
-# minor tweaks
-rg %>% 
-  select(indiv, locus, gene_copy, allele_int) %>%
-  arrange(indiv, locus, gene_copy) %>%
-  write_rds("../private/rrsh_genotypes.rds", compress = "xz")
-
-# how about metadata?
-# It needs ungrouping...
-# hatchery names and sex look good
-read_rds("../private/as_sent/RR_steelhead_meta.rds") %>%
-  ungroup() %>%
-  write_rds(path = "../private/rrsh_metadata.rds", compress = "xz")
-```
-
-## For: Wednesday, May 20, 2020
-
-### 1. Data set format
-
-Laura and Anne, here is the format we want the main, initial datasets to be in:
-
-* A tibble of genotypes that must have _at least_ these columns:
-    1. `indiv`: the individual ID (could be, for example, the NMFS_DNA_ID
-    2. `locus`: the name of the locus
-    3. `gene_copy`: a column of 1's and 2's
-    4. `allele_int`: a column of alleles, 1-4, with NA for missing data.
-    
-    These columns can be in any order, but ordered as above is natural.
-Note that the genotypes can contain more columns.  For example, it could have a full
-microhaplotype allele column, etc.  But for the SNP data sets, we don't really
-need another one.
-
-* A tibble of metadata relevant to the parentage. At this point I am thinking
-that this includes:
-    1. `indiv`
-    2. `sex` a column of Male, Female, or NA
-    3. `spawner_group`: typically the data of collection/spawning
-    4. `year`: the year the individual was sampled/spawned
-    
-    Anne and Laura, can you think of anything else that belongs in here?
-    
-An example of these two data files can be found now by loading the package
-which gives access to `coho_genotypes` and `coho_metadata`.  (You will have to pull
-from upstream to master and load that version).
-
-### 2. Let's talk about the `data` folder and `data.R`
-
-* Just make sure we understand how package data can work.
-* Talk about `extdata` too.
-
-### 3. Matching samples
-
-We need to do a few things here:
-
-1. Function to convert to rubias format
-2. Run rubias to find matching samples.
-3. Find connected components.
-4. Figure out which of the version of the individuals will be kept as the
-canonical genotype.  
-
-Along the way, we will want to investigate the results.  So, we will break this
-down into different functions.
-
-Here are some things to read about that we will use:
-
-* [pivoting](https://tidyr.tidyverse.org/articles/pivot.html).  This is gather/spread, but on steroids.  New
-from the 'tidyr' package.
-* [tidygraph](https://www.data-imaginist.com/2017/introducing-tidygraph/) Thomas Lin Pedersen's tidyverse 
-solution to handling graphs and networks. TLP was an intern with Hadley at RStudio when he did gganinmate.
-Now, he is still with RStudio, I think, and does amazing work.
-
-I need you guys to get your steelhead data sets into that format so we can
-have those to test on.
-
-
-### 4. A little bit about NSE and rlang::enquo()
-
-Weird stuff, but it will let us convert to rubias with microhaps, when we have those.
-
-### 5. R CMD Check
-
-Two main points here:
-
-* Namespace addressing and Imports in Description.
-* Visible bindings for 'global' variables.
-
-
 
 
 ## Thursday, May 14, 2020
@@ -238,3 +106,170 @@ can all test new functions on these private data sets.
 **DON'T COMMIT THESE DATA SETS TO THE REPO!**
 
 
+
+## For: Wednesday, May 20, 2020
+
+### 1. Data set format
+
+Laura and Anne, here is the format we want the main, initial datasets to be in:
+
+* A tibble of genotypes that must have _at least_ these columns:
+    1. `indiv`: the individual ID (could be, for example, the NMFS_DNA_ID
+    2. `locus`: the name of the locus
+    3. `gene_copy`: a column of 1's and 2's
+    4. `allele_int`: a column of alleles, 1-4, with NA for missing data.
+    
+    These columns can be in any order, but ordered as above is natural.
+Note that the genotypes can contain more columns.  For example, it could have a full
+microhaplotype allele column, etc.  But for the SNP data sets, we don't really
+need another one.
+
+* A tibble of metadata relevant to the parentage. At this point I am thinking
+that this includes:
+    1. `indiv`
+    2. `sex` a column of Male, Female, or NA
+    3. `spawner_group`: typically the data of collection/spawning
+    4. `year`: the year the individual was sampled/spawned
+    
+    Anne and Laura, can you think of anything else that belongs in here?
+    
+An example of these two data files can be found now by loading the package
+which gives access to `coho_genotypes` and `coho_metadata`.  (You will have to pull
+from upstream to master and load that version).
+
+### 2. Let's talk about the `data` folder and `data.R`
+
+* Just make sure we understand how package data can work.
+* Talk about `extdata` too.
+
+### 3. Matching samples
+
+We need to do a few things here:
+
+1. Function to convert to rubias format
+2. Run rubias to find matching samples.
+3. Find connected components.
+4. Figure out which of the version of the individuals will be kept as the
+canonical genotype.  
+
+Along the way, we will want to investigate the results.  So, we will break this
+down into different functions.
+
+Here are some things to read about that we will use:
+
+* [pivoting](https://tidyr.tidyverse.org/articles/pivot.html).  This is gather/spread, but on steroids.  New
+from the 'tidyr' package.
+* [tidygraph](https://www.data-imaginist.com/2017/introducing-tidygraph/) Thomas Lin Pedersen's tidyverse 
+solution to handling graphs and networks. TLP was an intern with Hadley at RStudio when he did gganinmate.
+Now, he is still with RStudio, I think, and does amazing work.
+
+I need you guys to get your steelhead data sets into that format so we can
+have those to test on.
+
+
+### 4. A little bit about NSE and rlang::enquo()
+
+Weird stuff, but it will let us convert to rubias with microhaps, when we have those.
+
+### 5. R CMD Check
+
+Two main points here:
+
+* Namespace addressing and Imports in Description.
+* Visible bindings for 'global' variables.
+
+
+
+
+## For: Thursday, May 21, 2020
+
+### 1. Eric munges the RR and CV steelhead data sets
+
+Both Anne and Laura have sent me their genotypes and metadata file.
+They did a lot of the backend hard work, but I have a few things to do
+here to clean them up.
+
+#### CVSH
+
+**Genotypes**: These all looked great.  I checked them, ungrouped the tibble
+and then reordered the column names. I also arranged things so that all the
+genotypes for an individual are together in one place.  This is not a necessity,
+but it makes it easier to look at.
+
+**Metadata**.  This looks good, but I caught a few issues:
+```{r, eval=FALSE}
+# read in the original
+cm <- read_rds("../private/as_sent/cvsh_meta.rds")
+
+# It turns out that the hatchery names are not consistent. So we
+# need to fix those. Also, I don't want spaces in those names.
+
+# Note, we need to put spaces in hatchery names into a check() function.
+cm2 <- cm %>%
+  mutate(
+    hatchery = recode(
+      hatchery,
+      `Coleman National Fish Hatchery` = "Coleman Hatchery",
+      `Mokelumne Hatchery` = "Mokelumne River Hatchery",
+      `Nimbus River Hatchery` = "Nimbus Hatchery"
+    ),
+    hatchery = str_replace_all(hatchery, " +", "_")
+  )
+
+# then i resaved that
+write_rds(cm2, path = "../private/cvsh_metadata.rds", compress = "xz")
+```
+
+
+#### Russian River
+
+```{r, eval=FALSE}
+# having a look
+rg <- read_rds("../private/as_sent/RR_steelhead_geno.rds")
+
+# minor tweaks
+rg %>% 
+  select(indiv, locus, gene_copy, allele_int) %>%
+  arrange(indiv, locus, gene_copy) %>%
+  write_rds("../private/rrsh_genotypes.rds", compress = "xz")
+
+# how about metadata?
+# It needs ungrouping...
+# hatchery names and sex look good
+read_rds("../private/as_sent/RR_steelhead_meta.rds") %>%
+  ungroup() %>%
+  write_rds(path = "../private/rrsh_metadata.rds", compress = "xz")
+```
+
+
+## Week of Memorial Day (May 26--29)
+
+### A Minor Revamp of snppit
+
+After looking over Anne and Laura's data about the frequency of iteroparous
+fish and also the occurrence of individuals that are spawned on multiple
+days within a year (sometimes under different names), I realized that it might work
+better to finish implementing `snppit` support for individuals to belong to multiple
+spawner groups.  Looking over the code I see that it already has support for fish
+to spawn in multiple years, and it should not take too much to allow individuals to
+belong to multiple different spawner groups.  
+
+I have done this with a few changes to the code.  I am doing it in a new branch 
+of the snppit repo called `allow-multiple-spawner-groups`.  Here are the changes that
+I made:  [https://github.com/eriqande/snppit/commit/5ccad7b2e619e14436df38a0d4d2086fbbe62d48](https://github.com/eriqande/snppit/commit/5ccad7b2e619e14436df38a0d4d2086fbbe62d48).
+
+### Now that is done...
+
+Still working on testing it, but now the drill for repeat spawners and "matching samples"
+is to:
+
+* standardize all occurrences to a single ID.  I think by convention we should use
+the earliest occurrence.
+* For occurrence as a candidate parent, we will include only a single row for the individual, but
+we include all years that they occur in the year field (comma separated) and all
+spawner groups in the spawner group field (also comma separated).  
+* For the inclusion in the offspring field, we will include only their earliest occurrence
+in the SNPPIT input file.
+
+
+So, I must throw down some R code to do that...
