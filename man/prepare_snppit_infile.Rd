@@ -9,8 +9,8 @@ prepare_snppit_infile(
   S,
   use_spawner_group = TRUE,
   use_sex = TRUE,
-  min_age = 2,
-  max_age = 4,
+  min_age = 1,
+  max_age = 6,
   geno_err = 0.005,
   outf = tempfile()
 )
@@ -20,7 +20,7 @@ prepare_snppit_infile(
 \code{indiv}, \code{locus}, \code{gene_copy}, \code{allele_int}.  Missing data should be represented as
 NA.}
 
-\item{S}{a data frame of meta data with the columns \code{indiv}, \code{sex}, \code{spawner_group},
+\item{S}{a data frame of meta data with the columns \code{indiv}, \code{year}, \code{sex}, \code{spawner_group},
 and \code{hatchery}}
 }
 \description{

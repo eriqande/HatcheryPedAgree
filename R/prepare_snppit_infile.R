@@ -4,7 +4,7 @@
 #' @param G a long format data frame of SNPs.  It must have, at a minimum, the columns
 #'   `indiv`, `locus`, `gene_copy`, `allele_int`.  Missing data should be represented as
 #'   NA.
-#' @param S a data frame of meta data with the columns `indiv`, `sex`, `spawner_group`,
+#' @param S a data frame of meta data with the columns `indiv`, `year`, `sex`, `spawner_group`,
 #' and `hatchery`
 #' @export
 #' @examples
@@ -13,8 +13,8 @@ prepare_snppit_infile <- function(G,
                                   S,
                                   use_spawner_group = TRUE,
                                   use_sex = TRUE,
-                                  min_age = 2,
-                                  max_age = 4,
+                                  min_age = 1,
+                                  max_age = 6,
                                   geno_err = 0.005,
                                   outf = tempfile()) {
 
@@ -34,28 +34,34 @@ prepare_snppit_infile <- function(G,
   # get the marker names
   SNP_names <- colnames(M)[-1]
 
-  # prep the sex and spawn date data
+  # prep the sex and spawn date data, and also deal with years, which could
+  # be a character string.
   meta <- S %>%
     mutate(
       sex = recode(sex, Female = "F", Male = "M"),
       sex = ifelse(is.na(sex), "?", sex),
     ) %>%
     arrange(year, spawner_group) %>%
-    select(hatchery, indiv, sex, year, spawner_group)
+    select(hatchery, indiv, sex, year, spawner_group) %>%
+    mutate(
+      years_list = str_split(year, ","),
+      min_year = map_int(years_list, function(x) min(as.integer(x))),
+      max_year = map_int(years_list, function(x) max(as.integer(x)))
+      )
 
   # break the genos into candidate parents and offspring.
-  # Basically if your spawn year is less than the min year + the
+  # Basically if your latest spawn year is less than the min year + the
   # min age, then you don't get to be an offspring.  Likewise, if
-  # your spawn year is greater than max year - min age, you don't get
+  # your earliest spawn year is greater than max year - min age, you don't get
   # to be a candidate parent
   Offs <- meta %>%
-    filter(year >= min(year) + min_age) %>%
+    filter(max_year >= min(min_year) + min_age) %>%
     select(-sex, -spawner_group) %>%
     mutate(age_range = str_c(min_age, "-", max_age)) %>%
     left_join(., M, by = "indiv")
 
   Pars <- meta %>%
-    filter(year <= max(year) - min_age) %>%
+    filter(min_year <= max(max_year) - min_age) %>%
     left_join(., M, by = "indiv")
 
 
@@ -81,18 +87,20 @@ prepare_snppit_infile <- function(G,
     ")
 
   cat(preamble, file = outf)
-  write.table(cbind(SNP_names, geno_err),
+  write.table(
+    cbind(SNP_names, geno_err),
     row.names = FALSE,
     col.names = FALSE,
     quote = FALSE,
-    file = outf, append = TRUE
+    file = outf,
+    append = TRUE
   )
 
   # cycle over the different hatcheries that might be involved
   # and put in a block of parents for each
   dump <- lapply(split(Pars, Pars$hatchery), function(x) {
     cat("POP ", x$hatchery[1], "\n", file = outf, append = TRUE)
-    write.table(x %>% select(-hatchery),
+    write.table(select(x, -hatchery, -years_list, -min_year, -max_year),
       row.names = FALSE,
       col.names = FALSE,
       quote = FALSE,
@@ -107,7 +115,7 @@ prepare_snppit_infile <- function(G,
   # (hence the ? after the Offspring name)
   dump <- lapply(split(Offs, Offs$hatchery), function(x) {
     cat("OFFSPRING Offspring-", x$hatchery[1], " ?\n", file = outf, append = TRUE, sep = "")
-    write.table(x %>% select(-hatchery),
+    write.table(select(x, -hatchery, -years_list, -min_year, -max_year),
       row.names = FALSE,
       col.names = FALSE,
       quote = FALSE,

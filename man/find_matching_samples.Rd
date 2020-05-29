@@ -4,7 +4,7 @@
 \alias{find_matching_samples}
 \title{Find matching samples to a single representative}
 \usage{
-find_matching_samples(genotypes, return_aliases = FALSE, ...)
+find_matching_samples(genotypes, return_clusters = FALSE, ...)
 }
 \arguments{
 \item{genotypes}{A tibble like coho_genotypes that has}

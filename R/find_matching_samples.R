@@ -14,8 +14,9 @@
 #' # but we will just create some pairs that match by cranking
 #' # the min_frac_matching down to 80%
 #' find_matching_samples(coho_genotypes, min_frac_matching = 0.80)
-find_matching_samples <- function(genotypes, return_aliases = FALSE, ...) {
+find_matching_samples <- function(genotypes, return_clusters = FALSE, ...) {
 
+  clusters <- NULL
   aliases <- NULL
 
   # find the pairs
@@ -27,8 +28,8 @@ find_matching_samples <- function(genotypes, return_aliases = FALSE, ...) {
     select(num_non_miss:indiv_2)
 
   # now create a graph and find the connectected components
-  if (return_aliases == TRUE) {
-    aliases <- pairs %>%
+  if (return_clusters == TRUE) {
+    clusters <- pairs %>%
       rename(to = indiv_1, from = indiv_2) %>%
       select(to, from) %>%
       igraph::graph_from_data_frame() %>%
@@ -36,6 +37,9 @@ find_matching_samples <- function(genotypes, return_aliases = FALSE, ...) {
       .$membership %>%
       enframe() %>%
       rename(indiv = name, cluster = value) %>%
+      arrange(cluster, indiv)
+
+    aliases <- clusters %>%
       group_by(cluster) %>%
       mutate(
         csz = n(),
@@ -48,6 +52,6 @@ find_matching_samples <- function(genotypes, return_aliases = FALSE, ...) {
       select(indiv, aliases)
   }
 
-  list(pairs = pairs, aliases = aliases)
+  list(pairs = pairs, clusters = clusters, aliases = aliases)
 
 }

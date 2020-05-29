@@ -273,3 +273,23 @@ in the SNPPIT input file.
 
 
 So, I must throw down some R code to do that...
+
+## Friday, May 29, 2020
+
+Some things we have dealt with:
+
+* Missing data in the spawner groups needs to be explicitly denoted by `?` instead of NA.
+But, in the user-supplied meta data we should still use NA if there is nothing known about it.
+Only in cases where user wants to add the unknown spawner to within a comma-separated string
+does the user code missing as ?.  (For example 4/11/204,?,3/12/2013).  However it is hard to imagine
+that this is something anyone would ever need to do.
+
+Stuff to discuss:
+
+1. Multiple spawner groups and years with matchers.
+2. Cross-hatchery and cross-sex matchers. Note cross-hatchery stuff is tough to fix, so we
+make extra copies of individuals.  There is potential for self-assignment in those cases, so
+we have named those copies so that it is easy to find them in the output and vet them.
+3. The `system` and `system2` commands.  For now we are just going to keep it simple.
+4. Temporary files and directories.
+5. The `inst` directory and binaries (They don't fly with CRAN!).
