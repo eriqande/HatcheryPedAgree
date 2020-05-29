@@ -46,7 +46,7 @@ for SNPPIT.  For every cluster of matching samples we will use, as the genotype,
 sample with the least missing data.  We will also use the sex of that individual (sometimes
 there are mismatches in the sex of the matching genotypes).  Sometimes there are mismatches in
 the hatchery of the matching genotypes.  In those cases, each separate hatchery gets its own
-canonical individual named as the ID of the main canonical individual with the hathery
+canonical individual named as the ID of the main canonical individual with the hatchery
 name appended to it.  The following function takes care of this and reorganizes both the
 genotypes and also the meta data into `snppit_genos` and `snppit_meta` (as well as a few other list
 components).
@@ -96,19 +96,12 @@ reorg$cross_sex_matches
 
 We have rolled these two steps into a single run_snppit() function.
 
-Internaly, it does something this to write the data
-```{r, eval=FALSE}
-prepare_snppit_infile(
-  G = reorg$snppit_genos, 
-  S = reorg$snppit_meta, 
-  outf = tempfile()
-  )
-```
-And then it runs it inside `system()`.
+Internally, it calls `prepare_snppit_infile()` to write the data,
+and then it runs `snppit` inside the `system()` command.
 
 Here is what that looks like:
 ```{r}
-run_snppit(reorg$snppit_genos, reorg$snppit_meta)
+snppit_dir1 <- run_snppit(reorg$snppit_genos, reorg$snppit_meta)
 ```
 
 
