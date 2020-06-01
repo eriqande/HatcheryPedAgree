@@ -2,7 +2,7 @@
 % Please edit documentation in R/reorganize_matching_samples.R
 \name{reorganize_matching_samples}
 \alias{reorganize_matching_samples}
-\title{Relabel matching genotypes to a single ID and reorganized their years and spawner groups}
+\title{Relabel matching genotypes to a single ID and reorganize their years and spawner groups}
 \usage{
 reorganize_matching_samples(genotypes, metadata, clusters)
 }

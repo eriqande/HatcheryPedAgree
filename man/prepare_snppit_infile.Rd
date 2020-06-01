@@ -24,7 +24,9 @@ NA.}
 and \code{hatchery}}
 }
 \description{
-More later...
+The meta data, S, determines who gets put into the snppit infile via a left
+join.  So, if it turns out that we are requsting the addition of individuals
+that are not in \code{G}, this will throw an error.
 }
 \examples{
 prep_for_snppit(G = coho_genotypes, S = coho_metadata)

@@ -1,6 +1,9 @@
 #' prepare long-format genotypes for snppit
 #'
-#' More later...
+#' The meta data, S, determines who gets put into the snppit infile via a left
+#' join.  So, if it turns out that we are requsting the addition of individuals
+#' that are not in `G`, this will throw an error.
+#'
 #' @param G a long format data frame of SNPs.  It must have, at a minimum, the columns
 #'   `indiv`, `locus`, `gene_copy`, `allele_int`.  Missing data should be represented as
 #'   NA.
@@ -48,6 +51,16 @@ prepare_snppit_infile <- function(G,
       min_year = map_int(years_list, function(x) min(as.integer(x))),
       max_year = map_int(years_list, function(x) max(as.integer(x)))
       )
+
+  # make sure genotype data are available for all the individuals in the metadata
+  these_have_no_genos <- meta %>%
+    anti_join(M, by = "indiv")
+  if (nrow(these_have_no_genos) > 0) {
+    stop(
+      "Error.  S in prepare_snppit_file is requesting addition of fish with no genotypes in G: ",
+      paste(these_have_no_genos$indiv, collapse = ", ")
+    )
+  }
 
   # break the genos into candidate parents and offspring.
   # Basically if your latest spawn year is less than the min year + the

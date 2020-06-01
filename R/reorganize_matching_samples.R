@@ -1,5 +1,5 @@
 
-#' Relabel matching genotypes to a single ID and reorganized their years and spawner groups
+#' Relabel matching genotypes to a single ID and reorganize their years and spawner groups
 #'
 #' If there are matching samples, we want to make sure that we have just a single
 #' ID for each cluster, and that the years and spawner groups get organized
@@ -16,7 +16,9 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
 
   # figure out which individual to take for each cluster.
   # It will be the one with the most non-missing genotypes and, in case
-  # of a tie, the one taken will be pretty much arbitrary
+  # of a tie, the one taken will be pretty much arbitrary.  Note that
+  # if there are any IDs in genotypes or clusters that are not in meta data this will
+  # cause a problem.  So, we semijoin on the metadata at the end.
   ids_key <- genotypes %>%
     semi_join(clusters, by = "indiv") %>%
     group_by(indiv) %>%
@@ -25,7 +27,8 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
     arrange(cluster, desc(num_good_genos)) %>%
     group_by(cluster) %>%
     dplyr::do(tibble(retained_id = .$indiv[1], original_id = .$indiv)) %>%
-    ungroup()
+    ungroup() %>%
+    semi_join(metadata, by = c("original_id" = "indiv"))
 
 
   # now, we attach that result to the meta data
@@ -118,9 +121,11 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
   ) %>%
     arrange(hatchery, year, spawner_group)
 
-  # now, down at the end here we return a list of outputs
+  # now, down at the end here we return a list of outputs.
+  # note that we leave the retained_id column in matchers_meta2, as it
+  # can be helpful to know that
   list(
-    matchers_metadata = select(matchers_meta2, -retained_id),
+    matchers_metadata = matchers_meta2,
     snppit_meta = snppit_meta,
     snppit_genos = snppit_genos,
     cross_hatchery_matches = cross_hatchery_matches,

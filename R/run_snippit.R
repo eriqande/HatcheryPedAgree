@@ -31,7 +31,7 @@ run_snppit <- function(
     ...
   )
 
-  message("Running snpping in directory ", outdir)
+  message("Running snppit in directory ", outdir)
 
   snppit_path <- system.file("bin/snppit-Darwin", package = "HatcheryPedAgree")
 

@@ -1,0 +1,237 @@
+---
+title: "Typical Analysis and Testing..."
+output: 
+  html_notebook:
+    toc: true
+---
+
+
+## Initial Maneuvers
+
+Load up the data
+```{r}
+library(tidyverse)
+library(HatcheryPedAgree)
+
+genotypes <- read_rds("../private/cvsh_genotypes.rds")
+metadata <- read_rds("../private/cvsh_metadata.rds")
+```
+
+Now, deal with individuals having a lot of missing data. First, just look at
+the distribution:
+```{r}
+miss_dsn <- genotypes %>%
+  group_by(indiv) %>%
+  summarise(
+    num_all_loci = n() / 2,  # check to make sure each gene copy is explicitly listed as NA
+    num_non_miss_loci = sum(!is.na(allele_int)) / 2)
+
+count(miss_dsn, num_all_loci)  # good.  Everyone has 93 loci
+
+full_histo <- ggplot(miss_dsn, aes(x = num_non_miss_loci)) +
+  geom_histogram(binwidth = 1)
+full_histo
+```
+
+That is cool.  Now, lets's squash the y-axis down to see the small piles more
+clearly.
+```{r}
+full_histo +
+  ylim(0,800)
+```
+
+OK, here is what I would do. 
+
+1. For parentage, I would use all the fish with $\geq 80$ non-missing
+genotypes.  
+2. However, for finding matching samples, I would try to recover those with
+at least 50 markers.
+
+That way, some of the fish with between 50 and 80 markers, might get recovered
+if, in fact, they were genotyped with at least 80 successfully called genotypes
+under a separate ID.
+
+So, let us start doing that
+```{r}
+genos50 <- miss_dsn %>%
+  filter(num_non_miss_loci >= 50) %>%
+  semi_join(genotypes, ., by = "indiv")
+
+# first time through, just get the distribution of matching proportions
+for_histo <- find_matching_samples(genos50, min_frac_matching = 0.8)
+
+# check the distribution
+for_histo$pairs %>%
+  mutate(frac_match = num_match / num_non_miss) %>%
+  ggplot(aes(x = frac_match)) +
+  geom_histogram()
+```
+
+Look at that in a table:
+```{r}
+for_histo$pairs %>%
+  mutate(frac_match = num_match / num_non_miss) %>%
+  filter(frac_match > 0.90) %>%
+  arrange(frac_match) %>%
+  slice(1:30)
+```
+I suspect that a few of those in the 94% range are ones where one of the individuals
+did not type well, had a fair bit of missing data, and also some bad genotypes.  So, I
+will set the cutoff at 93%, and maybe a handful of those will be recovered.
+```{r}
+# get the clusters of matching genotypes each indvidual belongs to
+for_real <- find_matching_samples(genos50, min_frac_matching = 0.93, return_clusters = TRUE)
+
+# we will end up using the identified clusters
+head(for_real$clusters)
+```
+
+
+
+## Reorganizing for SNPPIT
+
+At this point, `for_real$clusters` is the tibble we need to re-organize our
+genotypes and meta-data for SNPPIT.  For every cluster of matching samples we will use, as the genotype, the
+sample with the least missing data.  
+
+Because we might have some individuals with fewer than 80 non-missing loci, we need
+to do some extra steps to make sure that we correctly toss those out.  Ultimately,
+we need to toss out any of the individuals that were chosen to be canonical individuals
+but have fewer than 80 non-missing loci. As a consequence, we will need to run the
+reorganization step twice.  The first time we identify who the retained individuals are
+for each cluster.  Then we remove any clusters with retained individuals having < 80
+non-missing genotypes, and then we run it again.
+
+### First reorganization
+
+```{r}
+# first we do the first reorganization
+reorg1 <- reorganize_matching_samples(
+  genotypes = genos50, 
+  metadata = metadata, 
+  clusters = for_real$clusters
+)
+
+# then we identify all the retained_id's that have fewer than 80
+# non-missing loci
+toss_these <- miss_dsn %>%
+  filter(num_non_miss_loci < 80) %>%
+  semi_join(
+    select(reorg1$matchers_metadata, cluster, retained_id),
+    .,
+    by = c("retained_id" = "indiv")
+  )
+
+
+toss_these
+```
+
+Whoa-ho!  None of the retained individuals in the cluster had fewer than 80 non-missing loci.
+What about the original ids in those clusters?
+```{r}
+salvaged <- miss_dsn %>%
+  filter(num_non_miss_loci < 80) %>%
+  left_join(
+    .,
+    select(reorg1$matchers_metadata, cluster, retained_id, original_id),
+    by = c("indiv" = "original_id")
+  ) %>%
+  filter(!is.na(cluster))
+
+salvaged
+```
+The above table is showing the 25 individuals that had <80 non-missing genotypes, but which were
+identified as the same individual as a fish with a different ID and which did have more than
+80 non-missing genotypes.  Actually, I think that is wrong...Some things are a little messed up here.
+
+### Second reorganization
+
+Since we know all of our retained individuals have at least 80 genotypes
+we don't need to remove any clusters and we can reorganize them all
+using just the genotypes that have at least 80 genotypes per fish.  However,
+the metadata for all fish in metadata that don't have matching genotypes
+gets passed on it SNPPIT, so we need to be sure to filter the metadata down
+to only those that have 80 genotype or more...
+```{r}
+genos80 <- miss_dsn %>%
+  filter(num_non_miss_loci >= 80) %>%
+  semi_join(genotypes, ., by = "indiv")
+meta80 <- miss_dsn %>%
+  filter(num_non_miss_loci >= 80) %>%
+  semi_join(metadata, ., by = "indiv")
+
+
+reorg2 <- reorganize_matching_samples(
+  genotypes = genos80, 
+  metadata = meta80, 
+  clusters = for_real$clusters
+)
+
+```
+
+---
+
+Note that here we are also use the sex of the retained individual (sometimes
+there are mismatches in the sex of the matching genotypes). Also, sometimes there are mismatches in
+the hatchery of the matching genotypes.  In those cases, each separate hatchery gets its own
+canonical individual named as the ID of the main canonical individual with the hatchery
+name appended to it. That has all been taken care of in the `reorganize_matching_samples()`
+function.
+
+Let's have a look at some of the different components of that output.
+
+### `matchers_metadata`
+
+This is the meta data for all the matching genotypes.  Column `original_id` shows what they
+were named on input, and column `new_id` shows the ID used to identify them now in the
+SNPPIT-ready output.
+```{r}
+reorg2$matchers_metadata
+```
+Holy moly! There are 4188 fish that belong to matching clusters!
+
+And the number of clusters of different sizes is:
+```{r}
+for_real$clusters %>%
+  count(cluster) %>%
+  count(n)
+```
+
+### `snppit_meta` and `snppit_genos`
+
+These are the tibbles that are ready to pass into `prepare_snppit_infile()`.  Multiple
+years and spawner_groups of the matching individuals have been lumped into
+comma-separated strings for the year and spawner group inputs to SNPPIT.
+
+### `cross_hatchery_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish from more
+than one hatchery.
+```{r}
+reorg2$cross_hatchery_matches
+```
+
+### `cross_sex_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish with more than
+one reported sex
+```{r}
+reorg2$cross_sex_matches
+```
+
+
+## Prepare a SNPPIT infile and run it
+
+We have rolled these two steps into a single run_snppit() function.
+
+Internally, it calls `prepare_snppit_infile()` to write the data,
+and then it runs `snppit` inside the `system()` command.
+
+Here is what that looks like:
+```{r}
+snppit_dir1 <- run_snppit(reorg2$snppit_genos, reorg2$snppit_meta)
+```
+
+
+
+
