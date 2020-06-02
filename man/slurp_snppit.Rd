@@ -10,7 +10,7 @@ slurp_snppit(DIR, S)
 \item{DIR}{the directory where the output lives}
 
 \item{S}{the tibble of sex and date.  Must have columns
-Indiv,   SEX, and    collection_date}
+indiv,   sex, spawner_group, and hatchery}
 }
 \description{
 More later...

@@ -1,6 +1,10 @@
 ---
 title: "Typical Analysis and Testing..."
 output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
   html_notebook:
     toc: true
 ---

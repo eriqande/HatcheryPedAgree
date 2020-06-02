@@ -293,3 +293,11 @@ we have named those copies so that it is easy to find them in the output and vet
 3. The `system` and `system2` commands.  For now we are just going to keep it simple.
 4. Temporary files and directories.
 5. The `inst` directory and binaries (They don't fly with CRAN!).
+
+## To Do:
+
+* Add a `new_id` column to the cross_hatchery_matches and to cross_sex_matches as well,
+if possible.
+
+* 
+

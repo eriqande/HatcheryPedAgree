@@ -84,7 +84,7 @@ prepare_snppit_infile <- function(G,
   }
   if (use_spawner_group == FALSE) {
     spawn_group_col <- ""
-    Pars <- Pars %>% select(-spawn_date)
+    Pars <- Pars %>% select(-spawner_group)
   }
 
 
