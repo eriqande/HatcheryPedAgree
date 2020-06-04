@@ -186,7 +186,10 @@ write_rds(SAD_results, path = "outputs/CV_SAD_results.rds", compress = "xz")
 snppit_dir_noSAD <- run_snppit(
   reorg$snppit_genos, 
   reorg$snppit_meta, 
+  outdir = "../tmp_snppit_arena/CV_no_SAD_run",
   use_spawner_group = FALSE,
   use_sex = FALSE
   )
+no_SAD_results <- slurp_snppit("../tmp_snppit_arena/CV_no_SAD_run", reorg$snppit_meta)
+write_rds(no_SAD_results, path = "outputs/CV_no_SAD_results.rds", compress = "xz")
 ```
