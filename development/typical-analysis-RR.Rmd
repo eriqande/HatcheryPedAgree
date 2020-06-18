@@ -1,0 +1,146 @@
+---
+title: "Typical Analysis and Testing...RR"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+  html_notebook:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+start_time <- Sys.time()
+```
+
+
+## Load the Data
+
+```{r}
+library(tidyverse)
+library(HatcheryPedAgree)
+
+genotypes <- read_rds("../private/rrsh_genotypes.rds")
+metadata <- read_rds("../private/rrsh_metadata.rds")
+
+```
+
+## Assess Patterns of Missing Data, and deal with it
+
+```{r}
+miss_dsn <- genotypes %>%
+  group_by(indiv) %>%
+  summarise(
+    num_all_loci = n() / 2,  # check to make sure each gene copy is explicitly listed as NA
+    num_non_miss_loci = sum(!is.na(allele_int)) / 2)
+
+count(miss_dsn, num_all_loci)  # good.  Everyone has 94 loci (even if some are missing)
+
+full_histo <- ggplot(miss_dsn, aes(x = num_non_miss_loci)) +
+  geom_histogram(binwidth = 1)
+full_histo
+```
+So, these data are already filtered to have >= 85 non-missing loci.
+
+## Matching Samples
+
+```{r}
+meta <- metadata
+genos <- genotypes
+
+# first time through, just get the distribution of matching proportions
+for_histo <- find_matching_samples(genos, min_frac_matching = 0.8)
+
+# check the distribution
+for_histo$pairs %>%
+  mutate(frac_match = num_match / num_non_miss) %>%
+  ggplot(aes(x = frac_match)) +
+  geom_histogram()
+
+# get the clusters of matching genotypes each indvidual belongs to
+for_real <- find_matching_samples(genos, min_frac_matching = 0.95, return_clusters = TRUE)
+
+# we will end up using the identified clusters
+head(for_real$clusters)
+```
+
+
+
+## Reorganizing for SNPPIT
+
+At this point, `for_real$clusters` is the tibble we need to re-organize our genotypes and meta-data
+for SNPPIT.  For every cluster of matching samples we will use, as the genotype, the
+sample with the least missing data.  We will also use the sex of that individual (sometimes
+there are mismatches in the sex of the matching genotypes).  Sometimes there are mismatches in
+the hatchery of the matching genotypes.  In those cases, each separate hatchery gets its own
+canonical individual named as the ID of the main canonical individual with the hatchery
+name appended to it.  The following function takes care of this and reorganizes both the
+genotypes and also the meta data into `snppit_genos` and `snppit_meta` (as well as a few other list
+components).
+```{r}
+reorg <- reorganize_matching_samples(
+  genotypes = genos, 
+  metadata = meta, 
+  clusters = for_real$clusters
+)
+```
+
+Let's have a look at some of the different components of that output.
+
+### `matchers_metadata`
+
+This is the meta data for all the matching genotypes.  Column `original_id` shows what they
+were named on input, and column `new_id` shows the ID used to identify them now in the
+SNPPIT-ready output.
+```{r}
+reorg$matchers_metadata
+```
+
+### `snppit_meta` and `snppit_genos`
+
+These are the tibbles that are ready to pass into `prepare_snppit_infile()`.  Multiple
+years and spawner_groups of the matching individuals have been lumped into
+comma-separated strings for the year and spawner group inputs to SNPPIT.
+
+### `cross_hatchery_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish from more
+than one hatchery.
+```{r}
+reorg$cross_hatchery_matches
+```
+
+### `cross_sex_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish with more than
+one reported sex
+```{r}
+reorg$cross_sex_matches
+```
+
+
+## Prepare a SNPPIT infile and run it
+
+We have rolled these two steps into a single run_snppit() function.
+
+Internally, it calls `prepare_snppit_infile()` to write the data,
+and then it runs `snppit` inside the `system()` command.
+
+Here is what that looks like:
+```{r}
+snppit_dir1 <- run_snppit(reorg$snppit_genos, reorg$snppit_meta)
+
+snppit_dir1
+```
+
+
+# Running Time
+
+Running the code and rendering this notebook required approximately this much time
+on a Mac laptop of middling speed:
+```{r}
+Sys.time() - start_time
+```
+
+

@@ -1,0 +1,15 @@
+---
+title: "Developing cmoparison of SNPPIT runs"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(HatcheryPedAgree)
+
+snppit_results <- list(
+  no_SAD = read_rds("outputs/CV_no_SAD_results.rds"),
+  SAD = read_rds("outputs/CV_SAD_results.rds")
+)
+```
+
