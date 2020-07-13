@@ -53,13 +53,15 @@ prep_to_compare_snppit_runs <- function(
     select(starts_with("idx"), everything())
 
 
+  return(D3)
+
   ### Made it to here so far, and just testing
-  g <- ggplot(D3, aes(x = idx_by_year_and_hatchery, y = FDR + 0.05 * (as.integer(type_f) - 1), colour = type_f)) +
+  g <- ggplot(D3 %>% filter(!is.na(kid_hatchery)), aes(x = idx_by_year_and_hatchery, y = FDR + 0.05 * (as.integer(type_f) - 1), colour = type_f)) +
     geom_hline(yintercept = 0.05, colour = "white") +
     geom_point(shape = 21, stroke = 0.2, size = 1.2) +
     facet_grid(kid_min_year ~ kid_hatchery) +
     scale_color_manual(values = c("blue", "red"))
-  ggsave(g, filename = "development/outputs/sad-no-sad-fdr-hathchery-by-year-facet-grid.pdf",
+  ggsave(g, filename = "development/outputs/RR-sad-no-sad-fdr-hathchery-by-year-facet-grid.pdf",
          width = 25, height = 14)
 
   # now, we want to pick out those indivs that are not assigned to the same

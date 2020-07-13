@@ -4,12 +4,11 @@
 \alias{prep_to_compare_snppit_runs}
 \title{Prepare SNPPIT runs to compare them}
 \usage{
-prep_to_compare_snppit_runs(
-  D,
-  type_levels = c("nSD_full", "nSD_dump10", "wSD_full", "wSD_dump10"),
-  GTseqed = sex_and_date$Indiv,
-  GT_hi_miss = gt_miss10p
-)
+prep_to_compare_snppit_runs(L)
+}
+\arguments{
+\item{L}{a list of outputs from different snppit runs.  These should be named by whatever
+you want to call each run.}
 }
 \description{
 More later

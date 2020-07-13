@@ -65,6 +65,10 @@ for_real <- find_matching_samples(genos, min_frac_matching = 0.95, return_cluste
 head(for_real$clusters)
 ```
 
+I will save that for later
+```{r}
+write_rds(for_real, path = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/for_read.rds")
+```
 
 
 ## Reorganizing for SNPPIT
@@ -76,14 +80,20 @@ there are mismatches in the sex of the matching genotypes).  Sometimes there are
 the hatchery of the matching genotypes.  In those cases, each separate hatchery gets its own
 canonical individual named as the ID of the main canonical individual with the hatchery
 name appended to it.  The following function takes care of this and reorganizes both the
-genotypes and also the meta data into `snppit_genos` and `snppit_meta` (as well as a few other list
-components).
+genotypes and also the meta data into `snppit_genos` and `snppit_meta`
+(as well as a few other list components).
 ```{r}
 reorg <- reorganize_matching_samples(
   genotypes = genos, 
   metadata = meta, 
   clusters = for_real$clusters
 )
+
+# and I will also save that
+write_rds(
+  x = reorg,
+  path = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/reorg.rds",
+  compress = "xz")
 ```
 
 Let's have a look at some of the different components of that output.
@@ -129,11 +139,33 @@ and then it runs `snppit` inside the `system()` command.
 
 Here is what that looks like:
 ```{r}
-snppit_dir1 <- run_snppit(reorg$snppit_genos, reorg$snppit_meta)
+snppit_dir1 <- run_snppit(
+  reorg$snppit_genos, 
+  reorg$snppit_meta, 
+  outdir = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/snppit-run-dir"
+)
 
 snppit_dir1
 ```
 
+
+# Now, do an unconstrained run
+
+We won't use sex or date (but year and hatchery still need to match).  And we
+will set the possible age of maturity from 1 to 7.
+```{r}
+snppit_dir2 <- run_snppit(
+  reorg$snppit_genos, 
+  reorg$snppit_meta, 
+  outdir = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/snppit-run-noSAD",
+  use_spawner_group = FALSE,
+  use_sex = FALSE,
+  min_age = 1,
+  max_age = 7,
+)
+
+snppit_dir2
+```
 
 # Running Time
 

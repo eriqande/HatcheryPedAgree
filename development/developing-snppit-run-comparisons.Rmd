@@ -1,5 +1,5 @@
 ---
-title: "Developing cmoparison of SNPPIT runs"
+title: "Developing comparison of SNPPIT runs"
 output: html_notebook
 ---
 
@@ -7,9 +7,101 @@ output: html_notebook
 library(tidyverse)
 library(HatcheryPedAgree)
 
-snppit_results <- list(
-  no_SAD = read_rds("outputs/CV_no_SAD_results.rds"),
-  SAD = read_rds("outputs/CV_SAD_results.rds")
+# I am going to use the RR stuff
+sex_and_date <- read_rds("../private/rrsh_metadata.rds")
+
+#my_nosad <- slurp_snppit(
+#  DIR = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/snppit-run-noSAD",
+#  S = sex_and_date
+#)
+#write_rds(my_nosad, path = "../private/rr-results/nosad.rds", compress = "xz")
+
+#my_sad <- slurp_snppit(
+#  DIR = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/snppit-run-dir",
+#  S = sex_and_date
+#)
+#write_rds(my_sad, path = "../private/rr-results/sad.rds", compress = "xz")
+
+#reorg <- read_rds("~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/reorg.rds")
+
+my_nosad <- read_rds("../private/rr-results/nosad.rds")
+my_sad <- read_rds("../private/rr-results/sad.rds")
+
+# now, put in a list to prep_to_compare:
+L <- list(
+  nosad = my_nosad,
+  sad = my_sad
 )
 ```
 
+
+Now, we can create a data frame that compares the two.  This will be useful for filtering:
+```{r}
+D3 <- prep_to_compare_snppit_runs(L)
+```
+
+
+Make a plot:
+```{r}
+ggplot(D3 %>% filter(!is.na(kid_hatchery)), aes(x = idx_by_year_and_hatchery, y = FDR + 0.05 * (as.integer(type_f) - 1), colour = type_f)) +
+    geom_hline(yintercept = 0.05, colour = "white") +
+    geom_point(shape = 21, stroke = 0.2, size = 1.2) +
+    facet_grid(kid_min_year ~ kid_hatchery) +
+    scale_color_manual(values = c("blue", "red"))
+```
+
+
+Quick Check of some numbers
+```{r}
+D3 %>%
+  group_by(kid_hatchery, kid_min_year) %>%
+  summarise(
+    tot = n(),
+    lt01 = sum(FDR < 0.01, na.rm = TRUE),
+    lt05 = sum(FDR <= 0.05, na.rm = TRUE)
+  )
+```
+
+And, we could also see how many total fish we think we get wrong when we apply rules
+like FDR < 0.05 for unconstrained or FDR < 0.02 for constrained.
+
+First, do just the constraineds....
+```{r}
+all_good_sads <- D3 %>%
+  filter(
+    type_of_analysis == "sad",
+    FDR < 0.02,
+    MaxP.Pr.Relat == "C_Se_Se"
+) %>%
+  arrange(FDR) %>%
+  select(kid, FDR)
+
+# that yields 10,550 assignments
+# and then the number we think we might have gotten wrong that way is about 15.
+sum(all_good_sads$FDR)
+
+# so, less than 2 out of 1,000 are expected to be incorrect
+```
+
+Now, we remove those from the data set, and get the noSADs that still look good.
+```{r}
+additional_no_sads_05 <- D3 %>%
+  filter(type_of_analysis == "nosad") %>%
+  anti_join(all_good_sads, by = "kid") %>%
+  filter(
+    FDR < 0.05,
+    MaxP.Pr.Relat == "C_Se_Se"
+    ) %>%
+  select(kid, FDR) %>%
+  arrange(FDR)
+
+# there are 386 of those.  
+# And how many do we think we got wrong?
+sum(additional_no_sads_05$FDR)
+
+# About 7 of those...
+# so, that is about 2% of those.  But the overall expected rate of errors is still
+22 / (10550 + 386)
+
+# which is about 2 in 1000.  
+```
