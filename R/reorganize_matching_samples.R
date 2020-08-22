@@ -7,6 +7,7 @@
 #' @param genotypes the genotypes
 #' @param metadata the meta data
 #' @param clusters the tibble with the matching sample clusters.
+#' @return A list with a variety of components:  (add later...)
 #' @export
 reorganize_matching_samples <- function(genotypes, metadata, clusters) {
 
@@ -34,6 +35,13 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
   # now, we attach that result to the meta data
   matchers_meta <- ids_key %>%
     left_join(metadata, by = c("original_id" = "indiv"))
+
+  # use the matching pairs, thus organized, to compute some reports about
+  # genotype discordance, etc.
+  geno_discord <- count_discrepancies(
+    pairs = matchers_meta,
+    genotypes = genotypes
+  )
 
   # check for matchers that are in different hatcheries
   # and bark a message if there are any.  They have to be treated
@@ -70,6 +78,24 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
     )) %>%
     select(cluster, new_id, everything()) %>%
     ungroup()
+
+  # below here we are mainly compiling up the genotypes.  There is just one thing that
+  # we want to do before that, however: for the retained_id fish that had matching samples
+  # that showed a homozygote-to-homozygote discordance (i.e. 11 vs 44), we want to mark those
+  # loci as missing in those retained_id fish.  We do that just by modifying genotypes.
+  if(nrow(geno_discord$alt_homoz_mismatches) > 0) {
+    make_these_na <- geno_discord$alt_homoz_mismatches %>%
+      select(retained_id, locus) %>%
+      rename(indiv = retained_id) %>%
+      mutate(dummy__ = 1)
+
+    genotypes %>%
+      left_join(make_these_na, by = c("indiv", "locus")) %>%
+      mutate(allele_int = ifelse(!is.na(dummy__), NA, allele_int)) %>%
+      select(-dummy__)
+
+    message("Rendered ", nrow(make_these_na), " genotypes NA because of mismatching homozygotes in the matching samples analysis")
+  }
 
 
   # now, we need to prepare the genotypes that we will use for SNPPIT.  Firt, we want to
@@ -129,7 +155,8 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
     snppit_meta = snppit_meta,
     snppit_genos = snppit_genos,
     cross_hatchery_matches = cross_hatchery_matches,
-    cross_sex_matches = cross_sex_matches
+    cross_sex_matches = cross_sex_matches,
+    geno_discord = geno_discord
   )
 
 }
