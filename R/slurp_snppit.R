@@ -1,4 +1,4 @@
-#' Read the outpur from snppit into a format useful for comparison
+#' Read the output from snppit into a format useful for comparison
 #'
 #' More later...
 #' @param DIR the directory where the output lives

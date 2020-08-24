@@ -2,7 +2,7 @@
 % Please edit documentation in R/slurp_snppit.R
 \name{slurp_snppit}
 \alias{slurp_snppit}
-\title{Read the outpur from snppit into a format useful for comparison}
+\title{Read the output from snppit into a format useful for comparison}
 \usage{
 slurp_snppit(DIR, S)
 }
