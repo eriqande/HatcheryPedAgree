@@ -11,7 +11,7 @@
 #' and `hatchery`
 #' @export
 #' @examples
-#' prep_for_snppit(G = coho_genotypes, S = coho_metadata)
+#' prepare_snppit_infile(G = coho_genotypes, S = coho_metadata)
 prepare_snppit_infile <- function(G,
                                   S,
                                   use_spawner_group = TRUE,
