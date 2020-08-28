@@ -26,6 +26,10 @@ prepare_snppit_infile <- function(G,
   spawn_group_col <- "POPCOLUMN_SPAWN_GROUP"
 
 
+  if(any(is.na(S$year))) {
+    stop("Missing data not allowed in the year column of S")
+  }
+
   # first, make a genotype matrix. Put spaces between the gene copies in a locus
   M <- G %>%
     select(indiv, locus, gene_copy, allele_int) %>%

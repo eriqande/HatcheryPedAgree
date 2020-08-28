@@ -4,13 +4,33 @@
 \alias{find_matching_samples}
 \title{Find matching samples to a single representative}
 \usage{
-find_matching_samples(genotypes, return_clusters = FALSE, ...)
+find_matching_samples(genotypes, return_clusters = TRUE, ...)
 }
 \arguments{
 \item{genotypes}{A tibble like coho_genotypes that has}
 
 \item{...}{parameters to be passed to rubias::close_matching_samples.
 Intended to be used for \code{min_frac_non_miss} and \code{min_frac_matching}}
+
+\item{return_cluster}{Set to TRUE by default, but you might not want
+to do this if you have a very permissive cutoff.  It makes a graph of
+the pairs and finds the connected components.}
+}
+\value{
+Returns a list with three components as follows:
+\itemize{
+\item \code{pairs}: A tibble holding the matching pairs that were found.  It has
+the following columns:
+\itemize{
+\item \code{num_non_miss}: number of loci missing in neither member of the pair
+\item \code{num_match}: number of non-missing loci having the same genotype in
+in each member of the pair.
+\item \code{indiv_1}: the ID of the first member of the pair.
+\item \code{indiv_2}:
+}
+\item \code{clusters}:
+\item \code{aliases}:
+}
 }
 \description{
 Given a specification of pairs of genotypes that must be from the
