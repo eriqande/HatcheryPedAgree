@@ -13,6 +13,9 @@ reorganize_matching_samples(genotypes, metadata, clusters)
 
 \item{clusters}{the tibble with the matching sample clusters.}
 }
+\value{
+A list with a variety of components:  (add later...)
+}
 \description{
 If there are matching samples, we want to make sure that we have just a single
 ID for each cluster, and that the years and spawner groups get organized

@@ -1,0 +1,20 @@
+---
+title: "example-analysis-russian-river"
+output: rmarkdown::html_vignette
+author: "Anne K. Beulke"
+vignette: >
+  %\VignetteIndexEntry{example-analysis-russian-river}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HatcheryPedAgree)
+```

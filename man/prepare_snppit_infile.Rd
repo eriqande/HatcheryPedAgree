@@ -29,5 +29,5 @@ join.  So, if it turns out that we are requsting the addition of individuals
 that are not in \code{G}, this will throw an error.
 }
 \examples{
-prep_for_snppit(G = coho_genotypes, S = coho_metadata)
+prepare_snppit_infile(G = coho_genotypes, S = coho_metadata)
 }

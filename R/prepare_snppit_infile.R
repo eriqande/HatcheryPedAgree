@@ -11,7 +11,7 @@
 #' and `hatchery`
 #' @export
 #' @examples
-#' prep_for_snppit(G = coho_genotypes, S = coho_metadata)
+#' prepare_snppit_infile(G = coho_genotypes, S = coho_metadata)
 prepare_snppit_infile <- function(G,
                                   S,
                                   use_spawner_group = TRUE,
@@ -25,6 +25,10 @@ prepare_snppit_infile <- function(G,
   sex_col <- "POPCOLUMN_SEX"
   spawn_group_col <- "POPCOLUMN_SPAWN_GROUP"
 
+
+  if(any(is.na(S$year))) {
+    stop("Missing data not allowed in the year column of S")
+  }
 
   # first, make a genotype matrix. Put spaces between the gene copies in a locus
   M <- G %>%

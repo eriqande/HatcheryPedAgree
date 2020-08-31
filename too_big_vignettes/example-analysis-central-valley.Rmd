@@ -1,0 +1,20 @@
+---
+title: "example-analysis-central-valley"
+output: rmarkdown::html_vignette
+author: "Laura C. Goetz"
+vignette: >
+  %\VignetteIndexEntry{example-analysis-central-valley}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HatcheryPedAgree)
+```
