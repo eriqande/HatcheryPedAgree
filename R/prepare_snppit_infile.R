@@ -11,7 +11,7 @@
 #'   NA.
 #' @param S a data frame of meta data with the columns `indiv`, `year`, `sex`, `spawner_group`,
 #' and `hatchery`
-#' @return a SNPPIT infile is produced.
+#' @return Function does not return a value of any importance. The side effect of the function is to write out a snppit input file.
 #' @export
 #' @examples
 #' prepare_snppit_infile(G = coho_genotypes, S = coho_metadata)
