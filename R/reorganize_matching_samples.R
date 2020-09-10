@@ -8,7 +8,7 @@
 #' @param metadata the metadata
 #' @param clusters the tibble with the matching sample clusters.
 #' @return A list with a variety of components:
-#' * `matchers_metadata`: a tibble of all the matching samples and their metadata
+#' * `matchers_metadata`: a tibble of all the matching sample clusters and their metadata
 #' * `snppit_meta`: a tibble of metadata in long format that is preped for use in [prepare_snppit_infile()]
 #' * `snppit_genos`: a tibble of genotype data in long format that is preped for use in [prepare_snppit_infile()]
 #' * `cross_hatchery_matches`: a tibble of matching samples that were spawned at more than one hatchery
