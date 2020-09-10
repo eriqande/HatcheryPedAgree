@@ -7,7 +7,13 @@
 #' @param genotypes the genotypes
 #' @param metadata the meta data
 #' @param clusters the tibble with the matching sample clusters.
-#' @return A list with a variety of components:  (add later...)
+#' @return A list with a variety of components:
+#' * `matchers_metadata`:
+#' * `snppit_meta`:
+#' * `snppit_genos`:
+#' * `cross_hatchery_matches`:
+#' * `cross_sex_matches`:
+#' * `geno_discord`:  a list like that returned in [count_discrepancies()].
 #' @export
 reorganize_matching_samples <- function(genotypes, metadata, clusters) {
 

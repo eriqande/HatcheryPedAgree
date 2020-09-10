@@ -98,11 +98,6 @@ reformat_no_sex_or_date_results <- function(D) {
       pa = pa_id,
       ma = ma_id
     ) %>%
-    mutate(
-      kid_year = as.numeric(kid_year),
-      ma_year = as.numeric(ma_year),
-      pa_year = as.numeric(pa_year)
-    ) %>%
     select(trio_index, kid, pa, ma, everything()) %>%
     left_join(t_inactive, by = "trio_index")
 
