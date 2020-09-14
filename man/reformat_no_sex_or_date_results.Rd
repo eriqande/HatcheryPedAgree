@@ -9,6 +9,9 @@ reformat_no_sex_or_date_results(D)
 \arguments{
 \item{D}{the output of  \code{\link[=slurp_snppit]{slurp_snppit()}}.}
 }
+\value{
+A tibble where the males have been placed in the pa columns and the females ahve been placed in the ma columns.
+}
 \description{
 The main thing going on here is to make sure that the pa column are males and the ma column are females
 and to declare a reported sex mismatch if they are both males or females.

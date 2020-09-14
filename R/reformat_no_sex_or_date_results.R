@@ -12,6 +12,7 @@ reformat_no_sex_or_date_results <- function(D) {
   # create a column that has the index for each trio
   D2 <- D %>%
     ungroup() %>%
+    mutate_at(vars(ends_with("year")), as.character) %>%  # needs to be done to allow row-binding later on...
     mutate(trio_index = 1:n()) %>%
     select(trio_index, everything())
 
@@ -63,9 +64,9 @@ reformat_no_sex_or_date_results <- function(D) {
     mutate(
       member = {
         ret <- c("kid", "ma", "pa")
-        if ( (!is.na(sex[2]) && !is.na(sex[3])) &&    # if both are not NA and sexes are reversed
+        if ( (!is.na(sex[2]) && !is.na(sex[3])) &&
              (sex[2] == "Male" && sex[3] == "Female")
-        ) {
+        ) {  # if both are not NA and sexes are reversed
           ret <- c("kid", "pa", "ma")
         } else if (!is.na(sex[3]) && sex[3] == "Female" && is.na(sex[2])) {  # if pa's sex is not NA and Female, and ma's sex is NA,
           ret <- c("kid", "pa", "ma")
@@ -102,13 +103,18 @@ reformat_no_sex_or_date_results <- function(D) {
     select(trio_index, kid, pa, ma, everything()) %>%
     left_join(t_inactive, by = "trio_index")
 
-  # then return those along with the NA columns
+  # then return those along with the NA columns, and add a column denoting whether
+  # or not the reported sexes are incompatbible with them two being parents.
   bind_rows(
     NA_trios,
     ta_done
   ) %>%
     arrange(trio_index) %>%
-    select(-trio_index)
+    select(-trio_index) %>%
+    mutate(
+      reported_parent_sex_incompatible = pa_sex == ma_sex
+    ) %>%
+    select(kid:ma_sex, reported_parent_sex_incompatible, everything())
 
 
 }

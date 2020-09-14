@@ -23,10 +23,17 @@ NA.}
 \item{S}{a data frame of meta data with the columns \code{indiv}, \code{year}, \code{sex}, \code{spawner_group},
 and \code{hatchery}}
 }
+\value{
+Function does not return a value of any importance.
+The side effect of the function is to write out a snppit input file!
+}
 \description{
 The meta data, S, determines who gets put into the snppit infile via a left
 join.  So, if it turns out that we are requsting the addition of individuals
 that are not in \code{G}, this will throw an error.
+}
+\details{
+This function is called within \code{\link[=run_snippit]{run_snippit()}}.
 }
 \examples{
 prepare_snppit_infile(G = coho_genotypes, S = coho_metadata)

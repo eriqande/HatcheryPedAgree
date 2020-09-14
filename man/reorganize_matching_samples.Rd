@@ -9,12 +9,20 @@ reorganize_matching_samples(genotypes, metadata, clusters)
 \arguments{
 \item{genotypes}{the genotypes}
 
-\item{metadata}{the meta data}
+\item{metadata}{the metadata}
 
 \item{clusters}{the tibble with the matching sample clusters.}
 }
 \value{
-A list with a variety of components:  (add later...)
+A list with a variety of components:
+\itemize{
+\item \code{matchers_metadata}: a tibble of all the matching sample clusters and their metadata
+\item \code{snppit_meta}: a tibble of metadata in long format that is preped for use in \code{\link[=prepare_snppit_infile]{prepare_snppit_infile()}}
+\item \code{snppit_genos}: a tibble of genotype data in long format that is preped for use in \code{\link[=prepare_snppit_infile]{prepare_snppit_infile()}}
+\item \code{cross_hatchery_matches}: a tibble of matching samples that were spawned at more than one hatchery
+\item \code{cross_sex_matches}: a tibble of matching samples that are marked as both sexes
+\item \code{geno_discord}:  a list like that returned in \code{\link[=count_discrepancies]{count_discrepancies()}}.
+}
 }
 \description{
 If there are matching samples, we want to make sure that we have just a single

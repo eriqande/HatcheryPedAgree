@@ -1,5 +1,5 @@
 
-#' @importFrom dplyr anti_join arrange bind_rows case_when count desc ends_with everything filter group_by left_join mutate n n_distinct recode rename select semi_join slice starts_with summarize summarise ungroup
+#' @importFrom dplyr anti_join arrange bind_rows case_when count desc ends_with everything filter group_by left_join mutate mutate_at n n_distinct recode rename select semi_join slice starts_with summarize summarise ungroup vars
 #' @importFrom ggplot2 aes facet_grid facet_wrap geom_hline geom_label geom_line geom_point ggplot ggsave guide_legend scale_color_manual scale_colour_manual scale_fill_manual
 #' @importFrom lubridate mdy
 #' @importFrom magrittr %>%
