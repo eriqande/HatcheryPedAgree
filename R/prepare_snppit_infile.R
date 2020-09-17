@@ -115,7 +115,7 @@ prepare_snppit_infile <- function(G,
   )
   #if hatchery information is not included
   if (hatchery == FALSE) {
-    dump <- write.table(select(x, -hatchery, -years_list, -min_year, -max_year),
+    dump <- write.table(select(Pars, -hatchery, -years_list, -min_year, -max_year),
                   row.names = FALSE,
                   col.names = FALSE,
                   quote = FALSE,
