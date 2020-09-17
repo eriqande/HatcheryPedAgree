@@ -19,6 +19,7 @@ prepare_snppit_infile <- function(G,
                                   min_age = 1,
                                   max_age = 6,
                                   geno_err = 0.005,
+                                  hatchery = TRUE,
                                   outf = tempfile()) {
 
   # these will get changed if we don't use them
@@ -112,7 +113,15 @@ prepare_snppit_infile <- function(G,
     file = outf,
     append = TRUE
   )
-
+  #if hatchery information is not included
+  if (hatchery == FALSE) {
+    dump <- write.table(select(x, -hatchery, -years_list, -min_year, -max_year),
+                  row.names = FALSE,
+                  col.names = FALSE,
+                  quote = FALSE,
+                  file = outf, append = TRUE, sep = "\t"
+      )
+  }
   # cycle over the different hatcheries that might be involved
   # and put in a block of parents for each
   dump <- lapply(split(Pars, Pars$hatchery), function(x) {
