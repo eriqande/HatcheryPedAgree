@@ -1,0 +1,129 @@
+---
+title: "Using the partition_two_snppit_runs() function"
+author: "Eric C. Anderson"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    df_print: paged
+  pdf_document: default
+---
+
+# Introduction
+
+This is primarily used for identifying the different combinations
+of results that you might see when comparing SAD (with Sex And Date)
+to noSAD (without Sex and Date) runs.  Typically you will pass the results of the SAD
+run in as Run1 to the function and the results of the noSAD run in as
+Run2.  For each run you can set a different FDR threshold to use when
+the function is partioning things, but I suspect that it will be typical
+to set FDR1 = 0.01 and FDR2 = 0.01.  
+
+
+This function simply explicitly partitions each kid from the pedigree inference
+project into a group based on characteristics of the inference of its parents in the
+two different snppit runs.  I find this easier to look at and think about than
+trees depicting filtering decision points that may or may not represent actual partitions.
+
+Briefly, the partition of these individuals is based on just a few binary characteristics
+of each kid within each run.  Namely:
+
+1. Does the kid have any inferred parents, or none (i.e. NA) in Run1 and in Run2?  If
+it doesn't have any inferred parents in a run, then the later criteria (2, 3, and 4 are
+largely moot).
+
+2. Did the trios in Run1 and Run2 enjoy having their maximum posterior trio category be C_Se_Se, or not?
+
+3. Was the trio found at an FDR below a certain threshold for each run?
+
+And finally, a fourth criterion that is not binary like the first three, and, further, is
+also a property of the comparison between the trios found for a kid in the two different runs,
+rather than being a property that can be associated with just a single run:
+
+4. How many parents are shared for the kid between the two runs, with possible answers 0 = (none!), 1 = just a single parent is shared, 2 = the same two parents are inferred in the two runs, or NA = in one or both of the runs the kid was not found to have a parent.
+
+The total number of possible categories from criteria 1--3 that a kid in a single run can
+belong to is: 1 (for NA) + 1 * 2 * 2.  So, at the first 3 criteria between the two 
+Runs there are 25 different categories possible.  
+
+Of those, 16 involve cases where parents are NA in neither run.  And in those cases there
+are three possible numbers of matching parents (0, 1, or 2), which turns those 16 into a possible
+48 cases.  
+
+Hence, we are partitioning the kids/trios up into 48 + 9 = 57 possible categories with these few
+criteria.
+
+Once you get the number in each of those categories, seeing them all out there in a way
+that adds up to the actual number of kids makes it a lot easier to think about which trios you want
+to retain and which you don't.  In fact, as we will see, we can just add a column which says, for
+each partition, whether you want to retain the trio from Run1, from Run2, or from Neither, then
+feed that back to pick out the trios you want.  (I haven't implemented that yet, but it will be easy).
+
+
+# Implementation Notes
+
+57 might seem like a lot of categories to keep track of.  I relied heavily on
+bit-masking to make it easier.  I probably could have gotten this code cleaner, but
+here is all the new code for the function.  
+```r
+`r paste(readLines("../R/partition_two_snppit_results.R"), collapse = "\n")`
+```
+
+If anyone wants to delve into this further with me I can tell you how bitmasks work.
+
+
+# Example using Laura's SAD and noSAD results
+
+I got these from laura and have put them in `private`.  So it looks like this:
+```{r, message=FALSE}
+library(tidyverse)
+library(HatcheryPedAgree)
+
+SAD <- read_rds("../private/cv-results/CV_SAD_results.rds")
+noSAD <- read_rds("../private/cv-results/CV_no_SAD_results.rds")
+
+PR <- partition_two_snppit_results(SAD, noSAD)
+```
+
+Here you can see a few different lines of the resulting data frame of 19,028 kids, namely
+one row from each of hte 29 different non-empty categories.  The
+two new columns added are `bit_category` and `verbal_category`.
+
+You have to click to the right to see all the columns.
+```{r}
+PR %>%
+  group_by(bit_category) %>%
+  slice_sample(n = 1)
+```
+
+Now, count up occurrences in the different partitions.  We sort them by number of occurrences:
+```{r}
+Summary <- PR %>%
+  count(bit_category, verbal_category) %>%
+  select(n, everything()) %>%
+  arrange(desc(n))
+
+Summary
+```
+
+
+Finally, it can be nice to break up the verbal description of the categories
+into three columns (this allows easier sorting, etc.)  You can break them
+up on the pipe: `|`, like so:
+```{r}
+Summ_sepa <- Summary %>%
+  separate(
+    col = verbal_category,
+    into = c("verbal_bit", "run_1_stuff", "run2_stuff", "run1_vs_run2_num_shared_parents"),
+    sep = "\\|"
+  )
+```
+
+I write that as a CSV and send it to Anne, Laura, Carlos, and Devon.
+
+```{r}
+write_csv(
+  Summ_sepa,
+  path = "../development/outputs/cv-sad-vs-nosad-partitions.csv"
+)
+```

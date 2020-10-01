@@ -3,6 +3,7 @@
 export(count_discrepancies)
 export(find_matching_samples)
 export(genos2rubias)
+export(partition_two_snppit_results)
 export(prep_to_compare_snppit_runs)
 export(prepare_snppit_infile)
 export(reformat_no_sex_or_date_results)
