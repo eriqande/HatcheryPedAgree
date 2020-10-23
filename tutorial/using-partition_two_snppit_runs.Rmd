@@ -4,9 +4,6 @@ author: "Eric C. Anderson"
 output:
   html_document:
     df_print: paged
-  html_notebook:
-    df_print: paged
-  pdf_document: default
 ---
 
 # Introduction
@@ -58,19 +55,6 @@ that adds up to the actual number of kids makes it a lot easier to think about w
 to retain and which you don't.  In fact, as we will see, we can just add a column which says, for
 each partition, whether you want to retain the trio from Run1, from Run2, or from Neither, then
 feed that back to pick out the trios you want.  (I haven't implemented that yet, but it will be easy).
-
-
-# Implementation Notes
-
-57 might seem like a lot of categories to keep track of.  I relied heavily on
-bit-masking to make it easier.  I probably could have gotten this code cleaner, but
-here is all the new code for the function.  
-```r
-`r paste(readLines("../R/partition_two_snppit_results.R"), collapse = "\n")`
-```
-
-If anyone wants to delve into this further with me I can tell you how bitmasks work.
-
 
 # Example using Laura's SAD and noSAD results
 
@@ -127,3 +111,15 @@ write_csv(
   path = "../development/outputs/cv-sad-vs-nosad-partitions.csv"
 )
 ```
+
+# Implementation Notes
+
+57 might seem like a lot of categories to keep track of.  I relied heavily on
+bit-masking to make it easier.  I probably could have gotten this code cleaner, but
+here is all the new code for the function.  
+```r
+`r paste(readLines("../R/partition_two_snppit_results.R"), collapse = "\n")`
+```
+
+If anyone wants to delve into this further with me I can tell you how bitmasks work.
+

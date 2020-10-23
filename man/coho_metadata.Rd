@@ -5,7 +5,7 @@
 \alias{coho_metadata}
 \title{Sex, year, and spawner group of 1984 coho salmon over seven years}
 \format{
-An object of class \code{spec_tbl_df} (inherits from \code{tbl_df}, \code{tbl}, \code{data.frame}) with 1984 rows and 4 columns.
+An object of class \code{spec_tbl_df} (inherits from \code{tbl_df}, \code{tbl}, \code{data.frame}) with 1984 rows and 5 columns.
 }
 \usage{
 coho_metadata

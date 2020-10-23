@@ -3,3 +3,6 @@
 ^README\.Rmd$
 ^development$
 ^private$
+^tmp_snppit_arena$
+^too_big_vignettes$
+^tutorial$

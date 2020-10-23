@@ -15,6 +15,7 @@ Depends:
     R (>= 3.5.0)
 Imports: 
     dplyr,
+    ggraph,
     ggplot2,
     glue,
     igraph,
@@ -26,6 +27,7 @@ Imports:
     rubias,
     stringr,
     tibble,
+    tidygraph,
     tidyr
 Suggests: 
     knitr,
