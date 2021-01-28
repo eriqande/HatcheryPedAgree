@@ -1,11 +1,14 @@
 
 
-#' After slurping in a SNPPIT run done without sex or date constraints, harmonize the declared sex and dates with the output
+#' After slurping in a SNPPIT run done without sex or date constraints,
+#' harmonize the declared sex and dates with the output
 #'
-#' The main thing going on here is to make sure that the pa column are males and the ma column are females
+#' The main thing going on here is to make sure that the pa column are males
+#' and the ma column are females
 #' and to declare a reported sex mismatch if they are both males or females.
 #' @param D the output of  [slurp_snppit()].
-#' @return A tibble where the males have been placed in the pa columns and the females ahve been placed in the ma columns.
+#' @return A tibble where the males have been placed in the pa columns and
+#' the females ahve been placed in the ma columns.
 #' @export
 reformat_no_sex_or_date_results <- function(D) {
 

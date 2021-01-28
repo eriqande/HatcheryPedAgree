@@ -4,8 +4,8 @@
 #'
 #' This returns the directory where it ran, so that you can slurp stuff out of there.
 #'
-#' @param genotypes A tibble of genotypes.  Should have been reoranized if there were matching samples.
-#' @param metadata A tibble of metadata.  Should have been reoranized if there were matching samples.
+#' @param genotypes A tibble of genotypes.  Should have been reoranized with [reorganize_matching_samples()] if there were matching samples.
+#' @param metadata A tibble of metadata.  Should have been reoranized with [reorganize_matching_samples()] if there were matching samples.
 #' @param additional_args  A quoted string of additional (i.e. beyond the -f option) options and arguments
 #' to pass to snppit.
 #' @param outdir The directory to run SNPPIT in and in which to write the output.

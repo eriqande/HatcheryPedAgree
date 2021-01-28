@@ -13,7 +13,7 @@
 #' * `snppit_genos`: a tibble of genotype data in long format that is preped for use in [prepare_snppit_infile()]
 #' * `cross_hatchery_matches`: a tibble of matching samples that were spawned at more than one hatchery
 #' * `cross_sex_matches`: a tibble of matching samples that are marked as both sexes
-#' * `geno_discord`:  a list like that returned in [count_discrepancies()].
+#' * `geno_discord`: a list like that returned in [count_discrepancies()].
 #' @export
 reorganize_matching_samples <- function(genotypes, metadata, clusters) {
 
