@@ -1,9 +1,9 @@
 #' Read the output from snppit into a format useful for comparison
 #'
-#' More later...
+#'
 #' @param DIR the directory where the output lives
-#' @param S the tibble of sex and date.  Must have columns
-#' indiv,   sex, spawner_group, and hatchery
+#' @param S the tibble of sex and date.  Must have columns `indiv`, `sex`,
+#' `spawner_group`, and `hatchery`
 #' @export
 slurp_snppit <- function(DIR, S) {
   S2 <- S %>%

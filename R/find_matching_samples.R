@@ -5,7 +5,8 @@
 #' with one column, `indiv`, and another column, `aliases` which is a list column, that
 #' includes, for each `indiv`, all the other names it is known by.
 #'
-#' @param genotypes A tibble like coho_genotypes that has
+#' @param genotypes A longform tibble like coho_genotypes that has the columns `indiv`, `locus`,
+#' `gene_copy`, and `allele_int` Missing data in the allele_int column must be denoted by NA.
 #' @param return_cluster Set to TRUE by default, but you might not want
 #' to do this if you have a very permissive cutoff.  It makes a graph of
 #' the pairs and finds the connected components.
@@ -18,9 +19,9 @@
 #'     * `num_match`: number of non-missing loci having the same genotype in
 #'       in each member of the pair.
 #'     * `indiv_1`: the ID of the first member of the pair.
-#'     * `indiv_2`:
-#' * `clusters`:
-#' * `aliases`:
+#'     * `indiv_2`: the ID of the second member of the pair.
+#' * `clusters`: The groups of matching samples
+#' * `aliases`: The alternatitive id's within a cluster
 #' @export
 #' @examples
 #' # There are not actually any matching samples in coho_genotypes

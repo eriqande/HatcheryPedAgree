@@ -1,6 +1,6 @@
 #' Prepare SNPPIT runs to compare them
 #'
-#' More later
+#' A way to visualize the differences in parent-offspring trios between SNPPIT runs
 #' @param L a list of outputs from different snppit runs.  These should be named by whatever
 #' you want to call each run.
 #' @export

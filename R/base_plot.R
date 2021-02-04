@@ -1,6 +1,6 @@
-#' plot to compare snppit runs
+#' plot to view the false discovery rates (FDR) of a SNPPIT run
 #'
-#'  more later
+#'  @param D the results from [slurp_snppit()]
 #'  @export
 base_plot <- function(D,
                       by_year = TRUE,

@@ -1,6 +1,8 @@
 
 #' convert long format genotypes to rubias format
 #'
+#' this function is called within [find_matching_samples()]
+#'
 #' @param genos the long format genotypes tibble with columns
 #' `indiv`, `locus`, `gene_copy` and `allele_int`.  Missing data
 #' in the allele_int column must be denoted by NA.
