@@ -15,6 +15,447 @@ knitr::opts_chunk$set(
 )
 ```
 
+# Overview
+
+We collected nonlethal genetic samples from finclips from all steelhead spawned at the four CV hatcheries producing steelhead (Coleman National Fish Hatchery, Feather River Hatchery, Mokelumne River Hatchery, Nimbus Fish Hatchery) from 2011-2019. Fish were genotyped with 96 SNPs, but which loci were used changed over the sampling period. 
+
+To reconstruct a pedigree from the samples using SNPPIT, we must: 
+
+1. Standardize program names and remove inconsistent loci
+2. Identify individuals that were re-genotyped and consolidate those duplicated IDs
+3. Produce both a metadata and genotype dataset for running SNPPIT
+4. Remove samples missing more than 10% of loci
+5. Matching Sample Analysis (MSA) 
+6. Run SNPPIT, save results, reconstruct pedigree (next script)
+
+There were 23,753 total samples, with 83 samples being duplicated, so 23,670 samples were received over the years. 420 samples were removed for missing more than 10% of loci, leaving 23,250 samples. The MSA identified 4,121 fish in a cluster. 19,029 unique steelhead were identified by the SNPPIT runs. 
+
+# Standarize Data
+
 ```{r setup}
-library(HatcheryPedAgree)
+library(HatcheryPedAgree) #lab-made package to simplify running SNPPIT in R
+library(tidyverse)
+```
+
+Add CollectionYear and SNPPIT.Descriptor column, remove SexID, SH131965-120, SH128851-273, and Omy_R04944. The complete 2011-2019 dataset was more or less inherited from previous student, so some formatting already happened beforehand. The loci SH128851-273 needs to be removed before running snppit now, as it has a MendIncLoci error rate over 2%.
+
+Metadata has inconsistencies sometimes - good to check all hatcheries are standardized
+
+```{r}
+cvsh <- read_rds("../metadata/cvsh.rds") %>% 
+  select(-(`SH128851-273`), -(`SH128851-273_1`))
+
+# 23,753 total samples
+```
+
+
+```{r}
+cvsh %>% count(HATCHERY)
+```
+
+```{r}
+cvsh <- cvsh %>% 
+  mutate(HATCHERY = case_when(
+    HATCHERY == "Coleman Hatchery" | HATCHERY == "Coleman National Fish Hatchery" ~ "Coleman Hatchery",
+    HATCHERY == "Mokelumne Hatchery" | HATCHERY == "Mokelumne River Hatchery" ~ "Mokelumne River Hatchery",
+    HATCHERY == "Nimbus Hatchery" | HATCHERY == "Nimbus River Hatchery" ~ "Nimbus Hatchery",
+    HATCHERY == "Feather River Hatchery" ~ "Feather River Hatchery"
+  ))
+```
+
+
+
+# Remove sample duplicates
+
+The best rendition of an individual to keep is the one with the most genotyped SNPs. Load in the metadata in two-column format and use these steps to remove genotype duplicates. 
+
+Of the 23,753 genotypes we started with, 83 were duplicated samples, so 23,670 total samples received from hatcheries.
+
+```{r}
+# first identify which rendition of an individual to keep
+## filter to everyone with duplicated IDs
+## reformat so 1st column is IDs and 2nd column starts genotypes
+rendition_genos <- cvsh %>%
+  count(NMFS_DNA_ID) %>%
+  filter(n != 1) %>%
+  semi_join(cvsh, ., by = "NMFS_DNA_ID") %>%
+  group_by(NMFS_DNA_ID) %>%
+  mutate(rendition = 1:n()) %>%
+  select(rendition, everything()) %>%
+  select(-(BOX_ID:NMFS_ID_VLOOKUP))
+
+# count up how many duplicated
+counts <- rendition_genos %>% group_by(NMFS_DNA_ID) %>% count() %>% rename("redos"="n")
+counts <- counts %>% group_by(redos) %>% count()
+# 1 sample was rerun 3x, 81 samples were rerun 2x
+
+
+keepers <- rendition_genos %>%
+  gather(key = "locus", value = "allele_int", -rendition, -NMFS_DNA_ID) %>%
+  group_by(NMFS_DNA_ID, rendition) %>%
+  summarise(num_non_miss = sum(allele_int != 0) / 2) %>%
+  arrange(NMFS_DNA_ID, desc(num_non_miss)) %>%
+  slice(1)
+
+# make a wide genos data frame of those individuals
+final_dupie_genos <- rendition_genos %>%
+  semi_join(keepers, by = c("NMFS_DNA_ID", "rendition")) %>%
+  ungroup() %>%
+  select(-rendition)
+
+# now, we want to make a similar wide file of all the rest,
+# dropping the ones that were duplicated.
+non_duped_genos <- cvsh %>%
+  anti_join(rendition_genos, by = "NMFS_DNA_ID") %>%
+  select(-(BOX_ID:NMFS_ID_VLOOKUP))
+
+wide_genos <- bind_rows(non_duped_genos, final_dupie_genos)
+# 23,670 samples received total
+
+# add on year and hatchery then save for metadata in CV reporting - will give unique fin clip samples through years/program
+metasample <- cvsh %>% 
+  filter(NMFS_DNA_ID %in% wide_genos$NMFS_DNA_ID) 
+samples <- inner_join(wide_genos, cvsh)
+no.spawners <- samples %>% 
+  group_by(SNPPIT.Descriptor, CollectionYear) %>% 
+  count()
+# corrected number of samples received per year
+
+# write this to rds
+#write_rds(samples, path = "../tables/num_finclips.rds", compress = "xz")
+
+```
+
+
+```{r}
+# plotting settings are for posters rn - likely change
+samples_fig <- ggplot(no.spawners)+
+  geom_line(aes(x=CollectionYear, y=n, color =SNPPIT.Descriptor))+
+  labs(x = " ", y = "Samples")+
+  scale_color_manual(values =c("#9379AD", "#e4af62", "#b65d2b", "#79ad9f"))+
+  scale_x_continuous(name = " ", breaks = seq(2011,2019,by=1))+
+  theme_classic()+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+         legend.position = "none",
+        axis.title=element_text(size=8),
+        axis.text=element_text(size=6),
+        panel.background = element_rect(fill='transparent'), #transparent panel bg
+    plot.background = element_rect(fill='transparent', color=NA), #transparent plot bg
+    panel.grid.major = element_blank(), #remove major gridlines
+    panel.grid.minor = element_blank(), #remove minor gridlines
+    legend.background = element_rect(fill='transparent'), #transparent legend bg
+    legend.box.background = element_rect(fill='transparent'))+
+  guides(color=guide_legend(title=""))+
+  ggtitle(" ")
+samples_fig
+```
+
+
+# Produce genotype and metadata datasets
+
+To run SNPPIT using HatchPedAgree, we need separate datasets with the spawner metadata and genotypes. 
+
+## Produce Genotype Dataset
+
+Convert file so each locus has its own two rows for each allele. Each ID will have two rows for each locus, one for each gene copy. 
+
+```{r}
+# need NMFS_DNA_ID, locus, gene_copy, and allele_int
+cvsh_geno <- wide_genos %>% 
+  gather(key = "locus", value = "allele_int", -NMFS_DNA_ID) %>%
+  mutate(locus = str_replace(locus, "_1$", "")) %>% 
+  group_by(NMFS_DNA_ID, locus) %>%
+  mutate(gene_copy = 1:2) %>%
+  mutate(allele_int = as.integer(allele_int)) %>%
+  rename(indiv = NMFS_DNA_ID) %>%
+  ungroup()
+
+
+cvsh_geno <- cvsh_geno %>% 
+  select(indiv, locus, gene_copy, allele_int)
+
+cvsh_geno[cvsh_geno == 0]<-NA
+```
+
+
+## Produce Metadata Dataset
+
+
+```{r}
+# need NMFS_DNA_ID, sex, spawner_group, year, hatchery
+
+cvsh_meta <- cvsh %>% 
+  select(NMFS_DNA_ID:NMFS_ID_VLOOKUP) %>%
+  filter(!duplicated(NMFS_DNA_ID)) %>%
+  mutate(
+    indiv = NMFS_DNA_ID,
+    spawner_group = COLLECTION_DATE,
+    sex = SEX,
+    year = CollectionYear,
+    hatchery = SNPPIT.Descriptor
+  ) %>%
+  select(indiv:hatchery, everything())
+
+
+# write to rds
+#write_rds(cvsh_geno, path = "../metadata/cvsh_geno.rds", compress = "xz")
+#write_rds(cvsh_meta, path = "../metadata/cvsh_meta.rds", compress = "xz")
+```
+
+
+# Remove High Missers
+
+we need to remove individuals missing data at more than 10%. Also confirm that all fish have 92 loci. We set the non-missing locus cutoff to >= 83 loci.  That is about 10% missing,
+and means we toss 1.77% of our samples - or 420 total samples. 
+
+Very important to change 0s to NAs! This step won't work otherwise. 
+
+```{r}
+miss_dsn <- cvsh_geno %>%
+  group_by(indiv) %>%
+  summarise(
+    num_all_loci = n() / 2,  # check to make sure each gene copy is explicitly listed as NA
+    num_non_miss_loci = sum(!is.na(allele_int)) / 2)
+
+count(miss_dsn, num_all_loci)  
+
+full_histo <- ggplot(miss_dsn, aes(x = num_non_miss_loci)) +
+  geom_histogram(binwidth = 1)+
+  xlim(0,100)
+full_histo
+
+```
+
+
+
+Zoom in on that a bit:
+```{r}
+full_histo +
+  ylim(0, 1000)
+```
+
+How many fish would different cutoffs remove?  Let's see what different choices would give us in terms
+of how many individuals are retained/removed:
+```{r}
+count_miss <- miss_dsn %>%
+  count(num_non_miss_loci) %>%
+  arrange(desc(num_non_miss_loci)) %>%
+  mutate(
+    fract_retained = cumsum(n) / sum(n),
+    fract_tossed = 1 - fract_retained
+    )
+```
+
+```{r}
+meta <- cvsh_meta %>%
+  semi_join(miss_dsn %>% filter(num_non_miss_loci >= 83), by = "indiv")
+genos <- cvsh_geno %>%
+  semi_join(miss_dsn %>% filter(num_non_miss_loci >= 83), by = "indiv")
+
+# write filtered metadata file to rds for table 1 and pop gen analysis
+# write_rds(meta, path ="../metadata/no_meta_miss.rds", compress = "xz")
+```
+
+
+# Matching Sample Analysis (MSA)
+
+Now that the necessary columns and individuals have been removed, it's time to identify which samples come from the same individual. It is common for hatcheries to respawn males in the same broodyear, and the same fish over multiple years. It's important to identify each instance an individual is reused, as it affects the pedigree reconstruction. In this step,these samples are identified and connected into clusters with each individual's uses over the dataset's years. The timing of each spawning event of an individual will determine if that individual is later included in each snppit analysis as an offspring or parent. This analysis will be used to identify iteroparous and reused spawners. 
+
+```{r}
+
+# first time through, just get the distribution of matching proportions
+for_histo <- find_matching_samples(genos, min_frac_matching = 0.8)
+
+# check the distribution
+for_histo$pairs %>%
+  mutate(frac_match = num_match / num_non_miss) %>%
+  ggplot(aes(x = frac_match)) +
+  geom_histogram()+
+  ggtitle("Matching Sample Analysis")
+
+# get the clusters of matching genotypes each indvidual belongs to
+for_real <- find_matching_samples(genos, min_frac_matching = 0.95, return_clusters = TRUE)
+
+# we will end up using the identified clusters
+head(for_real$clusters)
+```
+
+How many itero/reused spawners ?
+```{r}
+clusters <- for_real$clusters
+# 4121 observations - 4121 fish are in a cluster 
+```
+
+
+# Reorganizing for SNPPIT
+
+
+At this point, `for_real$clusters` is the tibble we need to re-organize our genotypes and meta-data for SNPPIT.  For every cluster of matching samples we will use, as the genotype, the sample with the least missing data.  We will also use the sex of that individual (sometimes there are mismatches in the sex of the matching genotypes).  Sometimes there are mismatches in the hatchery of the matching genotypes.  In those cases, each separate hatchery gets its own canonical individual named as the ID of the main canonical individual with the hatchery name appended to it.  The following function takes care of this and reorganizes both the genotypes and also the meta data into `snppit_genos` and `snppit_meta` (as well as a few other list components).
+```{r}
+reorg <- reorganize_matching_samples(
+  genotypes = genos, 
+  metadata = meta, 
+  clusters = for_real$clusters
+)
+```
+
+### `matchers_metadata`
+
+This is the meta data for all the matching genotypes.  Column `original_id` shows what they
+were named on input, and column `new_id` shows the ID used to identify them now in the
+SNPPIT-ready output.
+```{r}
+reorg$matchers_metadata
+
+clust <- reorg$matchers_metadata
+
+# save this to file for iteroparous and reused spawner analyses
+write_rds(clust, path ="../metadata/clusters.rds", compress = "xz")
+```
+
+### `snppit_meta` and `snppit_genos`
+
+These are the tibbles that are ready to pass into `prepare_snppit_infile()`.  Multiple
+years and spawner_groups of the matching individuals have been lumped into
+comma-separated strings for the year and spawner group inputs to SNPPIT.
+
+### `cross_hatchery_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish from more
+than one hatchery.
+```{r}
+reorg$cross_hatchery_matches
+
+```
+
+### `cross_sex_matches` 
+
+A tibble that shows you which clusters of matching genotypes included fish with more than
+one reported sex (198). 91 clusters containing 198 samples had both sexes recorded in the matching sample analysis. These individuals were included in the pedigree reconstruction, but were not included in sex-specific analyses.
+
+```{r}
+d<- reorg$cross_sex_matches
+
+de <- unique(d$cluster)
+d
+
+# save this to file for sexes to drop from sex-specific analyses, but keep in pedigree
+write_rds(d, path ="../metadata/sex_conflict.rds", compress = "xz")
+```
+
+
+# Prepare a SNPPIT infile and run it through SAD (constrained by sex and date) run
+
+We have rolled these two steps into a single run_snppit() function.
+
+Internally, it calls `prepare_snppit_infile()` to write the data,
+and then it runs `snppit` inside the `system()` command.
+
+Here is what that looks like:
+```{r}
+snppit_dir1 <- run_snppit(reorg$snppit_genos, reorg$snppit_meta)
+
+snppit_dir1
+```
+
+
+## Slurp up the results
+
+```{r}
+# here we call the "constrained" runs SAD for "sex_and_date"
+SAD_results <- slurp_snppit(snppit_dir1, reorg$snppit_meta)
+dir.create("outputs")
+write_rds(SAD_results, path = "outputs/CV_SAD_results.rds", compress = "xz")
+```
+
+
+# Unconstrained or "noSAD" run
+
+Compare results with SAD run
+
+```{r}
+snppit_dir_noSAD <- run_snppit(
+  reorg$snppit_genos, 
+  reorg$snppit_meta, 
+  use_spawner_group = FALSE,
+  use_sex = FALSE
+  )
+```
+
+```{r}
+no_SAD_results <- slurp_snppit(snppit_dir_noSAD, reorg$snppit_meta)
+write_rds(no_SAD_results, path="outputs/CV_no_SAD_results.rds", compress = "xz")
+```
+
+Both runs found 19,029 kids - a lot are going to be unassigned because it will try to identify parents for the 2011 and 2012 fish, which we don't have. 
+
+
+# Compare SNPPIT Runs
+
+To finalize the pedigree, the constrained and unconstrained runs will be compared to see if offspring are assigned same parents in both runs or not / if offspring are not assigned parents in a run. We can also identify various problems, like two sexes assigned as parents, etc. Here's copy and paste from Eric's development notes:
+
+
+### HPA summary of trio categories
+This is primarily used for identifying the different combinations
+of results that you might see when comparing SAD (with Sex And Date)
+to noSAD (without Sex and Date) runs.  Typically you will pass the results of the SAD
+run in as Run1 to the function and the results of the noSAD run in as
+Run2.  For each run you can set a different FDR threshold to use when
+the function is partioning things, but I suspect that it will be typical
+to set FDR1 = 0.01 and FDR2 = 0.01.  
+
+
+This function simply explicitly partitions each kid from the pedigree inference
+project into a group based on characteristics of the inference of its parents in the
+two different snppit runs.  I find this easier to look at and think about than
+trees depicting filtering decision points that may or may not represent actual partitions.
+
+Briefly, the partition of these individuals is based on just a few binary characteristics
+of each kid within each run.  Namely:
+
+1. Does the kid have any inferred parents, or none (i.e. NA) in Run1 and in Run2?  If
+it doesn't have any inferred parents in a run, then the later criteria (2, 3, and 4 are
+largely moot).
+
+2. Did the trios in Run1 and Run2 enjoy having their maximum posterior trio category be C_Se_Se, or not?
+
+3. Was the trio found at an FDR below a certain threshold for each run?
+
+And finally, a fourth criterion that is not binary like the first three, and, further, is
+also a property of the comparison between the trios found for a kid in the two different runs,
+rather than being a property that can be associated with just a single run:
+
+4. How many parents are shared for the kid between the two runs, with possible answers 0 = (none!), 1 = just a single parent is shared, 2 = the same two parents are inferred in the two runs, or NA = in one or both of the runs the kid was not found to have a parent.
+
+The total number of possible categories from criteria 1--3 that a kid in a single run can
+belong to is: 1 (for NA) + 1 * 2 * 2.  So, at the first 3 criteria between the two 
+Runs there are 25 different categories possible.  
+
+Of those, 16 involve cases where parents are NA in neither run.  And in those cases there
+are three possible numbers of matching parents (0, 1, or 2), which turns those 16 into a possible
+48 cases.  
+
+Hence, we are partitioning the kids/trios up into 48 + 9 = 57 possible categories with these few
+criteria.
+
+Once you get the number in each of those categories, seeing them all out there in a way
+that adds up to the actual number of kids makes it a lot easier to think about which trios you want
+to retain and which you don't.  In fact, as we will see, we can just add a column which says, for
+each partition, whether you want to retain the trio from Run1, from Run2, or from Neither, then
+feed that back to pick out the trios you want.  (I haven't implemented that yet, but it will be easy).
+
+
+```{r}
+PR <- partition_two_snppit_results(CV_SAD_results, CV_no_SAD_results)
+
+# count occurrences and sort
+PR %>%
+  group_by(bit_category) %>%
+  slice_sample(n = 1)
+
+Summary <- PR %>%
+  count(bit_category, verbal_category) %>%
+  select(n, everything()) %>%
+  arrange(desc(n))
+Summary
 ```
