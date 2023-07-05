@@ -78,9 +78,11 @@ reorganize_matching_samples <- function(genotypes, metadata, clusters) {
     group_by(cluster, retained_id, hatchery) %>%
     mutate(idx_in_hatchery = 1:n()) %>%
     group_by(cluster, retained_id) %>%
-    mutate(new_id = case_when(
-      hatchery == hatchery[1] ~ retained_id[hatchery == hatchery[1]],
-      hatchery != hatchery[1] ~ str_c(retained_id, hatchery[hatchery != hatchery[1]], sep = "_")
+    mutate(
+      new_id = ifelse(
+        hatchery == hatchery[1],
+        retained_id[hatchery == hatchery[1]],
+        str_c(retained_id, hatchery[hatchery != hatchery[1]], sep = "_")
     )) %>%
     select(cluster, new_id, everything()) %>%
     ungroup()
