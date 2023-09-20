@@ -4,7 +4,6 @@
 # HatcheryPedAgree
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
 The goal of HatcheryPedAgree is to automate the process of running
@@ -14,9 +13,12 @@ results of different runs, especially between runs that use meta data
 
 ## Installation
 
-As this is a private repo, you can get the package by forking it, then
-cloning the forked repo. Then building it with R.
+Within R, make sure you have the ‘remotes’ package and then do:
+
+``` r
+remotes::install_github("eriqande/HatcheryPedAgree")
+```
 
 ## Example
 
-Nothing here yet.
+Look in the `too_big_vignettes` directory for some examples.
