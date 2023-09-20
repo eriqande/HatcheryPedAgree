@@ -1,0 +1,259 @@
+---
+title: "Developing Sex Inference"
+output: html_notebook
+---
+
+# Introduction
+
+I want to quickly see what the landscape looks like for this.
+Basically, we need to have connected components where sex
+is known for at least one parent.
+
+I will just work from some RR data at first:
+```{r, message=FALSE}
+library(tidyverse)
+library(tidygraph)
+library(HatcheryPedAgree)
+library(ggraph)
+
+rr <- read_rds("../private/rr-results/nosad.rds") %>%
+  filter(FDR < 0.01, MaxP.Pr.Relat == "C_Se_Se")
+
+# note that if count up how many sex mismatches there are
+# you see there are a lot!
+rr %>% 
+  filter(ma_sex == pa_sex | ma_sex == "Male" | pa_sex == "Female") %>%
+  nrow(.)
+```
+
+But, most of those are just because the ma and pa columns have not
+been organized as they should:
+```{r}
+rr_fix <- reformat_no_sex_or_date_results(rr)
+
+# Now, all the problematic cases are where pa and ma are the same sex
+rr_fix %>% 
+  filter(ma_sex == pa_sex | ma_sex == "Male" | pa_sex == "Female")
+
+```
+Not only that, but we do have some individuals with unknown sex:
+```{r}
+rr_fix %>%
+  filter(is.na(pa_sex) | is.na(ma_sex))
+```
+Note also that some indivdiuals are named with a trailing `_HathceryName` that
+we will want to remove to start working with them.
+
+Our goal is to use the existing known matings to do our best to try
+to correct sexing errors.  For example, if someone who has been called a male
+is mated to three different individuals that are males, then it is probably
+best to recode that male as a female.  
+
+We can end up coding all this up in terms of the Sum Product algorithm on
+a factor graph that connects mating pairs (to find the marginal probability)
+of each individual's sex.  
+
+That should be easy to code up because each factor node (a marriage node) will 
+have exactly two variable nodes (the two mates) attached to it.  There is
+no need to put offspring into this.
+
+What's more, we will have mostly small connected components, and we probably
+won't have too many cycles.  However, I want to explore that now.  
+
+In the end, I think that just looking at it and doing it by eyeball might
+work better.
+
+
+# Investigating graphical structure / connectedness, etc
+
+First, we want to give a canonical name for each pair of mates.
+We do this by removing the `_Hatchery` on names where it exists and
+then sorting the names lexicographically
+```{r}
+cano_rr <- rr_fix %>%
+  mutate(
+    tmp1 = str_replace(pa, "_.*$", ""),
+    tmp2 = str_replace(ma, "_.*$", ""),
+  ) %>%
+  mutate(
+    cano1 = case_when(
+      tmp1 < tmp2 ~ tmp1,
+      TRUE ~ tmp2
+    ),
+    cano2 = case_when(
+      tmp1 < tmp2 ~ tmp2,
+      TRUE ~ tmp1
+    ),
+    sex1 = case_when(
+      tmp1 < tmp2 ~ pa_sex,
+      TRUE ~ ma_sex
+    ),
+    sex2 = case_when(
+      tmp1 < tmp2 ~ ma_sex,
+      TRUE ~ pa_sex
+    )
+  ) %>%
+  select(cano1, cano2, sex1, sex2, everything())
+```
+
+Now we can enumerate the pairs:
+```{r}
+pairs <- cano_rr %>%
+  count(cano1, cano2)
+```
+
+And now we want to make a graph out of those mated pairs, and determine
+the connected component that each individual is in. To find the connected components
+we don't even need to put the marriage nodes in there...
+```{r}
+conn_comps <- pairs %>%
+  rename(from = cano1, to = cano2) %>%
+  select(to, from) %>%
+  igraph::graph_from_data_frame() %>%
+  igraph::components() %>%
+  .$membership %>%
+  enframe() %>%
+  rename(indiv = name, cluster = value) %>%
+  arrange(cluster, indiv) %>%
+  group_by(cluster) %>%
+  mutate(cluster_size = n()) %>%
+  ungroup()
+  
+```
+So, let's look at the size of the different conn_comps:
+```{r}
+conn_comps  %>%
+  group_by(cluster) %>%
+  summarise(n = cluster_size[1]) %>%
+  ggplot(aes(x = n)) + 
+  geom_histogram(binwidth = 1)
+```
+
+So, that looks about right.  Except what is up with connected component of size 65 or so?
+When and where does that occur, and why?  Let's make some plots of all of those.  To do that
+we will make a tidy graph of the mates, and then attach some information to
+the nodes.
+```{r}
+tgraph <- pairs %>%
+  rename(from = cano1, to = cano2) %>%
+  select(to, from) %>%
+  igraph::graph_from_data_frame() %>%
+  as_tbl_graph()
+
+# get sex info for each fish from the info in the pedigree
+sex_info <- bind_rows(
+  rr_fix %>% select(kid, kid_sex) %>% rename(indiv = kid, sex = kid_sex),
+  rr_fix %>% select(ma, ma_sex)  %>% rename(indiv = ma, sex = ma_sex),
+  rr_fix %>% select(pa, pa_sex) %>% rename(indiv = pa, sex = pa_sex)
+) %>%
+  count(indiv, sex) %>%
+  select(-n)
+
+# check to make sure that no individual has multiple sexes
+sex_info %>%
+  count(indiv) %>%
+  filter(n > 1)
+  
+```
+Now, also from the pedigree, let's get a data frame that has
+one row for every year that an individual was spawned.
+```{r}
+spawn_info <- bind_rows(
+  rr_fix %>% select(ma, ma_year)  %>% rename(indiv = ma, spawn_year = ma_year),
+  rr_fix %>% select(pa, pa_year) %>% rename(indiv = pa, spawn_year = pa_year)
+) %>%
+  count(indiv, spawn_year) %>%
+  select(-n)
+
+# oddly, this doesn't seem to have any fish that spawned in
+# multiple years.  WTF?
+spawn_info %>%
+  count(indiv) %>%
+  filter(n > 1)
+
+```
+Now, join that info onto the nodes of the graph:
+```{r}
+tgraph2 <- tgraph %>%
+  left_join(sex_info, by = c("name" = "indiv")) %>%
+  left_join(spawn_info, by = c("name" = "indiv")) %>%
+  left_join(conn_comps, by  = c("name" = "indiv"))
+```
+
+That leaves us with 11 clusters.  Let's see if we can plot them
+in a faceted graph.
+```{r}
+tgraph2 %>%
+  filter(cluster_size > 15) %>%
+  ggraph(layout = "kk") +
+  geom_node_point(aes(shape = sex, fill = as.factor(spawn_year))) + 
+  geom_edge_link() +
+  scale_shape_manual(values = c(Male = 22, Female = 21), na.value = 23) +
+  facet_nodes(~ cluster, scales = "free")
+```
+
+# Clusters with clashing-sex pairs
+
+That is pretty cool.  So, what does it look like if we investigate all
+the clusters in which there are individuals that were of clashing
+sex:
+```{r}
+tmp <- rr_fix %>% 
+  filter(ma_sex == pa_sex | ma_sex == "Male" | pa_sex == "Female")
+sex_pair_clashers <- tibble(
+  indiv = unique(c(tmp$pa, tmp$ma)),
+  sex_clasher = TRUE
+)
+
+  
+
+tgraph3 <- tgraph2 %>%
+  left_join(sex_pair_clashers, by = c("name" = "indiv")) %>%
+  mutate(sex_clasher = ifelse(is.na(sex_clasher), FALSE, sex_clasher))
+
+sex_clash_clusters <- tgraph3 %>%
+  group_by(cluster) %>%
+  filter(any(sex_clasher == TRUE)) %>%
+  ungroup()
+
+  
+```
+Then plot those:
+```{r}
+g <- ggraph(sex_clash_clusters, layout = "kk") +
+  geom_edge_link() +
+  geom_node_point(aes(shape = sex, fill = sex_clasher, colour = sex_clasher), size = 10) + 
+  geom_node_point(aes(shape = sex), fill = NA, colour = "black", size = 10) + 
+  geom_node_text(aes(label = name), repel = TRUE) +
+  facet_nodes(~ cluster, scales = "free") +
+  scale_shape_manual(values = c(Male = 22, Female = 21), na.value = 23)
+
+ggsave(g, filename = "outputs/sex-clasher-facet-graphs.pdf", width = 40, height = 40)
+```
+That is cool.  There are some that clearly can be resolved by changing
+the sex of a single individual.
+
+
+# Cluster with unknown sex pairs
+
+We should be able to do the same with the clusters that include
+fish that don't have a reported sex.
+```{r}
+sex_unknown_clusters <- tgraph3 %>%
+  group_by(cluster) %>%
+  filter(any(is.na(sex))) %>%
+  ungroup()
+```
+Then plot:
+```{r}
+g <- ggraph(sex_unknown_clusters, layout = "kk") +
+  geom_edge_link() +
+  geom_node_point(aes(shape = sex, fill = sex, colour = sex_clasher), size = 10) + 
+  geom_node_point(aes(shape = sex), fill = NA, colour = "black", size = 10) + 
+  geom_node_text(aes(label = name), repel = TRUE) +
+  facet_nodes(~ cluster, scales = "free") +
+  scale_shape_manual(values = c(Male = 22, Female = 21), na.value = 23) +
+  scale_fill_manual(values = c(Male = "skyblue", Female = "pink"), na.value = "white")
+
+ggsave(g, filename = "outputs/sex-unknown-facet-graphs.pdf", width = 40, height = 40)
+```

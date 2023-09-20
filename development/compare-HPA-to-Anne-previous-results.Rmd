@@ -1,0 +1,227 @@
+---
+title: "Compare to Anne's Previous Results"
+output: 
+  html_notebook:
+    toc: true
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+start_time <- Sys.time()
+```
+
+Anne found quite a large number of discrepancies between her previous results
+and what she got from the HatcheryPedAgree workflow.  I am going to try to understand
+those differences here.
+
+I ran my own HatcheryPedAgree workflow in `typical-analysis-RR.Rmd`, and I stored
+various outputs in an Unsynced directory.
+```
+(base) /HatcheryPedAgreeOutputs/--% ls -R RussianRiver-July-6-2020/
+Anne_prior_results/ for_read.rds        reorg.rds           snppit-run-dir/
+
+RussianRiver-July-6-2020//Anne_prior_results:
+RR_parentage_corrected-sexes_June27_2019.csv
+Sad.rds
+noSad.rds
+
+RussianRiver-July-6-2020//snppit-run-dir:
+BigSmax_Input                           snppit_output_ChosenSMAXes.txt
+BigSmax_Output.txt                      snppit_output_FDR_Summary.txt
+PurePop_Input                           snppit_output_ParentageAssignments.txt
+PurePop_Output.txt                      snppit_output_PopSizesAnPiVectors.txt
+snppit_input.txt                        snppit_output_TrioPosteriors.txt
+snppit_output_BasicDataSummary.txt      snppit_seeds
+
+```
+That includes `Anne_prior_results`, which has Anne's previous results,
+and also `snppit-run-dir`, which has all the snppit output from my
+HatcheryPedAgree run, and also the `for_read.rds` (which is the `for_real`
+variable, and `reorg.rds` which is the `reorg` variable).
+
+# Libraries
+
+```{r}
+library(tidyverse)
+library(HatcheryPedAgree)
+```
+
+# Get anne's previous results
+
+```{r}
+apr <- read_csv(
+  "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/Anne_prior_results/RR_parentage_corrected-sexes_June27_2019.csv", 
+  guess_max = 20000)
+```
+
+# Get the noSAD results that I computed
+
+Might as well go straight to the noSAD results...
+
+```{r}
+sex_and_date <- read_rds("private/rrsh_metadata.rds")
+my_nosad <- slurp_snppit(
+  DIR = "~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/snppit-run-noSAD",
+  S = sex_and_date
+)
+reorg <- read_rds("~/Documents/UnsyncedData/HatcheryPedAgreeOutputs/RussianRiver-July-6-2020/reorg.rds")
+```
+
+Now, the first thing I want to investigate are those instances where Anne found a parent
+pair and the HPA workflow did not.  We have the wrinkle that we use only a single name for
+each individual, even if they were genotyped multiple times (as a "matching" sample).
+
+In other words, the individual might be called something different in Anne's data set
+than in the HPA data set.  So, to get around this, I want to augment the no_sad results
+I got, by including rows in it that represent all the different ways a trio
+(kid, pa, and ma) could have been named (that are different from the canonical way
+that HPA used), so that we can left join them (as kids), and also properly find them
+as parents.
+
+So, for each canonical name, we need to get all the other, **different** names that
+might be used in Anne's results.  At first, we just deal with getting all the extra names
+for the kids.  We deal with ma and pa later.
+```{r}
+aliases <- reorg$matchers_metadata %>%
+  filter(new_id != original_id) %>%
+  select(original_id, new_id)
+kid_additions <- aliases %>%
+  left_join(my_nosad, by = c("new_id" = "kid")) %>%
+  rename(kid = original_id) %>%
+  select(-new_id)
+
+my_nosad2 <- bind_rows(my_nosad, kid_additions)
+```
+
+
+# join anne's results
+
+For now, I just want to focus on what anne found, so we left join:
+```{r}
+aprLJ <- left_join(
+  apr, 
+  my_nosad2, 
+  by = c("Kid_ID" = "kid"),
+  suffix = c("_apr", "_hpa")
+  )
+```
+
+Now, quickly look at the FDRs here:
+```{r}
+ggplot(aprLJ, aes(x = FDR_apr, y = FDR_hpa)) +
+  geom_point(alpha = 0.1) +
+  theme_bw()
+```
+
+
+```{r}
+aprLJ %>%
+  filter(Kid_ID %in% aliases$original_id ) %>%
+  View()
+```
+
+
+```{r}
+looksie <- aprLJ %>%
+  select(Kid_ID, Ma_ID, ma, Pa_ID, pa, FDR_apr, FDR_hpa, Pvalue_apr, 
+         Pvalue_hpa, Kid_Year, Ma_SpawnYear, Kid_Hatchery, MaxP.Pr.Relat_apr, MaxP.Pr.Relat_hpa) %>%
+  mutate(correct = (ma == Ma_ID & pa == Pa_ID) | (pa == Ma_ID & ma == Pa_ID) )
+```
+
+```{r}
+ggplot(looksie %>% filter(correct == TRUE), aes(x = Pvalue_apr, y = Pvalue_hpa, colour = MaxP.Pr.Relat_hpa)) +
+  geom_point(alpha = 0.5) + 
+  theme_bw() +
+  geom_abline(slope = 1, intercept = 0) +
+  facet_grid(Kid_Hatchery ~ Ma_SpawnYear)# +
+  #ylim(0, 0.15)
+```
+
+OK,  that is interesting.  I think it might have to do with using pooled allele frequencies.
+Let's look at those allele freqs. We can do that here, in R.
+
+## Allele freqs
+
+Here we can look at the allele frequencies that SNPPIT is using to compute likelihoods.
+I think HPA uses all the fish except for those in the last year.
+```{r}
+genos <- read_rds("private/rrsh_genotypes.rds")
+meta <- read_rds("private/rrsh_metadata.rds")
+
+gmeto <- genos %>%
+  left_join(meta, by = "indiv")
+
+grand_mean <- gmeto %>%
+  filter(!is.na(allele_int)) %>%
+  count(locus, allele_int) %>%
+  group_by(locus) %>%
+  mutate(gm_freq = n / sum(n))
+
+hatchery_means <- gmeto %>%
+  filter(!is.na(allele_int)) %>%
+  group_by(hatchery, locus, allele_int) %>%
+  tally() %>%
+  mutate(freq = n / sum(n)) %>%
+  left_join(grand_mean, by = c("locus", "allele_int"))
+```
+Let's plot those and see what it looks like:
+```{r}
+ggplot(hatchery_means, aes(x = gm_freq, y = freq)) +
+  geom_point() + 
+  geom_abline(intercept = 0, slope = 1) +
+  facet_wrap(~ hatchery, nrow = 1)
+```
+
+OK, now what I would like to do is see how things compare over kid return years from 2007 to 2016.  
+We will make a function for that.  I want to compare the frequencies that Anne used (aggregated over
+hatcheries, but only including the parents from 1 to 7 years previous) to the means (over all years)
+for each of the hatcheries.  And I also want to get the actual frequencies in each of the hatcheries
+with just those 7 years included each time.
+
+```{r}
+agg_freqs_by_kidyear <- function(D, kyear) {
+  D %>%
+    filter(year >= kyear - 7, year <= kyear - 1) %>%
+    filter(!is.na(allele_int)) %>%
+    group_by(locus, allele_int) %>%
+    tally() %>%
+    mutate(
+      agg_freq = n / sum(n),
+      kidyear =  kyear
+      )
+}
+hatch_freqs_by_kidyear <- function(D, kyear) {
+  D %>%
+    filter(year >= kyear - 7, year <= kyear - 1) %>%
+    filter(!is.na(allele_int)) %>%
+    group_by(hatchery, locus, allele_int) %>%
+    tally() %>%
+    mutate(
+      hatch_freq = n / sum(n),
+      kidyear =  kyear
+      )
+}
+
+hatch_freqs <- lapply(2007:2016, function(x) hatch_freqs_by_kidyear(gmeto, x) ) %>%
+  bind_rows()
+agg_freqs <- lapply(2007:2016, function(x) agg_freqs_by_kidyear(gmeto, x) ) %>%
+  bind_rows()
+```
+
+Now, we can plot some of these things.  First, let's plot the aggregated freqs Anne used
+against the overall hatchery freqs:
+```{r}
+agg_freqs %>%
+  left_join(hatchery_means, by = c("locus", "allele_int")) %>%
+  ggplot(aes(x = freq, y = agg_freq)) +
+  geom_point() +
+  facet_grid(kidyear ~ hatchery)
+```
+
+Nothing super revealing there.  It does show that the variability in Coyote Valley is a little higher
+and that might account for what look like more FDR discrepancies between HPA and the pooled allele freqs
+approach in Coyote Valley (at least, looking at the the figures a few sections up.)
